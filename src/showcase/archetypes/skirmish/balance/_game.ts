@@ -8,7 +8,7 @@
  * tick-by-tick behavioral specs; this plays whole matches and reads magnitudes.
  */
 
-import type { Engine } from '@open-loop/engine';
+import { createThrottle, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -52,10 +52,41 @@ export function buildGame(): Game {
 }
 
 /**
- * The reference player's one manual opener: hire the next lieutenant as soon as its price is
- * in the purse, by the rival's own rule (`hireNext`). Call each tick of a live match; returns
- * the hire just made.
+ * One turn of the reference player's one manual opener: hire the next lieutenant whose price
+ * is in the purse, by the rival's own rule (`hireNext`).
+ *
+ * @param game - the match whose player seat it staffs
+ * @returns the lieutenant this turn hired, or `undefined`
  */
-export function staffMatch(game: Pick<Game, 'match'>): string | undefined {
+export function playerTurn(game: Pick<Game, 'match'>): string | undefined {
   return hireNext(game.match.p)?.id;
+}
+
+/** Game seconds between the reference player's turns. */
+export const PLAYER_EVERY = 0.5;
+
+/**
+ * Seats the reference player on the engine's tick driver: it takes a `playerTurn` every
+ * `PLAYER_EVERY` game seconds. The cadence holds while no tick is longer than
+ * `PLAYER_EVERY`, whatever `tickDelta` the runner steps by, and a runner's `until` stays a
+ * read.
+ *
+ * The seat registers after every module, so a turn at the end of one tick sits where a turn
+ * before the next tick would. A run takes its opening turn with `playerTurn` before it
+ * starts, because no tick precedes the match's first second.
+ *
+ * @param game - the engine and the match whose player seat it staffs
+ * @param onTurn - receives the lieutenant each turn hired, or `undefined`, for a probe to record
+ * @returns the function that unseats the player; call it when the run ends.
+ */
+export function seatPlayer(
+  game: Pick<Game, 'engine' | 'match'>,
+  onTurn?: (hired: string | undefined) => void,
+): () => void {
+  const turn = createThrottle({ interval: PLAYER_EVERY });
+  return game.engine.tickDriver.onTick((dt) => {
+    if (!turn.ready(dt)) return;
+    const hired = playerTurn(game);
+    onTurn?.(hired);
+  });
 }

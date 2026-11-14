@@ -6,7 +6,7 @@
  * Run: pnpm exec vite-node src/showcase/archetypes/skirmish/balance/arc-probe.ts
  */
 import { toNumber } from '@open-loop/engine';
-import { runUntil } from '@open-loop/engine/harness';
+import { runUntil, type RunUntilResult } from '@open-loop/engine/harness';
 import { hustlersPay } from '../modules/policy';
 import { CONTRACTS, DISTRICTS, PLAYER_PERSONA } from '../data/contracts';
 import { UNIT_KINDS } from '../data/units';
@@ -16,7 +16,7 @@ import { PRESENCE, countsOf, total } from '../modules/battle';
 import type { Side } from '../modules/side';
 import { destination, onRoad } from '../modules/travel';
 import { plan } from '../data/map';
-import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
+import { MAX_MATCH_S, TICK, buildGame, playerTurn, seatPlayer } from './_game';
 
 // The cell carries no Node typings; the probe runs under vite-node.
 declare const process: { exit(code: number): never };
@@ -62,93 +62,105 @@ function playMatch(contractIdx: number, attempt: number): 'won' | 'lost' | 'stal
   const launched = { p: new Set<number>(), e: new Set<number>() };
   const flanks = { p: 0, e: 0 };
   const convoys = { p: 0, e: 0 };
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // match's step, which `'uniform'` mode runs before every advance.
-  const run = runUntil({
-    engine: game.engine,
-    tickDelta: TICK,
-    maxSimTime: MAX_MATCH_S,
-    until: () => {
-      for (const s of [p, e])
-        for (const c of s.convoys.value) {
-          if (launched[s.id].has(c.id)) continue;
-          launched[s.id].add(c.id);
-          convoys[s.id] += 1;
-          if (c.progress === 0 && c.path.join() !== plan(c.from, destination(c)).join())
-            flanks[s.id] += 1;
+  // A hire reads the match clock its tick left: the match ticks before the seat, and an
+  // advance of `TICK` is one tick. So it carries the stamp `until` gives that advance's reads.
+  const onTurn = (hired: string | undefined) => {
+    if (hired) beat(`hired the ${hired}`, true);
+  };
+  onTurn(playerTurn(game));
+  const unseat = seatPlayer(game, onTurn);
+  let run: RunUntilResult;
+  try {
+    run = runUntil({
+      engine: game.engine,
+      tickDelta: TICK,
+      maxSimTime: MAX_MATCH_S,
+      until: () => {
+        for (const s of [p, e])
+          for (const c of s.convoys.value) {
+            if (launched[s.id].has(c.id)) continue;
+            launched[s.id].add(c.id);
+            convoys[s.id] += 1;
+            if (c.progress === 0 && c.path.join() !== plan(c.from, destination(c)).join())
+              flanks[s.id] += 1;
+          }
+        for (const s of [p, e]) {
+          check(`${s.id} scrip`, toNumber(s.scrip.value));
+          check(`${s.id} hq`, toNumber(s.hq.value));
+          check(`${s.id} army`, armySize(s));
         }
-      const hired = staffMatch(game);
-      if (hired) beat(`hired the ${hired}`, true);
-      for (const s of [p, e]) {
-        check(`${s.id} scrip`, toNumber(s.scrip.value));
-        check(`${s.id} hq`, toNumber(s.hq.value));
-        check(`${s.id} army`, armySize(s));
-      }
-      const hustlers = p.hustlers();
-      beat('first hustler bought', hustlers > 5);
-      beat('first ley tap', toNumber(p.econ.getProducer('ley-tap')!.count.value) > 0);
-      beat('first training floor', p.floorCount() > 0);
-      beat('first unit trained', UNIT_KINDS.some((k) => readyUnits(p, k) > 0) || armySize(p) >= 1);
-      beat('first gate gun', p.turretLevel() > 1);
-      beat('rival first gate gun', e.turretLevel() > 1);
-      beat(
-        'first sentry nest',
-        p.nests.some((n) => toNumber(n.hp.value) > 0),
-      );
-      beat(
-        'rival first sentry nest',
-        e.nests.some((n) => toNumber(n.hp.value) > 0),
-      );
-      beat('crew chartered (tier two)', p.chartered());
-      beat('rival chartered', e.chartered());
-      for (const b of p.barracks.getAll())
-        beat(`${b.def.name} opens ${b.def.trains}s`, toNumber(b.producer.count.value) > 0);
-      for (const r of p.research.getAll())
-        beat(`research: ${r.def.name}`, r.purchasable.active.value);
-      beat(
-        'supply cap binds (a converter limited by room)',
-        match.clock.value > 0 &&
-          p.barracks.getAll().some((b) => b.producer.bottleneck?.value === 'capacity'),
-      );
-      beat('first squat', toNumber(p.squats.count.value) > 0);
-      beat(
-        'army reaches a siege force plus a holding squad',
-        armySize(p) >= MIN_SIEGE_FORCE + REF_PRESENCE,
-      );
-      beat(
-        'first clash',
-        DISTRICTS.some(
-          (_, i) =>
-            total(countsOf(p.squads[i])) > PRESENCE && total(countsOf(e.squads[i])) > PRESENCE,
-        ),
-      );
-      for (let i = 0; i < DISTRICTS.length; i++) {
-        beat(`you take ${DISTRICTS[i].name}`, match.control[i].value >= 1);
-        beat(`rival takes ${DISTRICTS[i].name}`, match.control[i].value <= -1);
-      }
-      beat(
-        'your first assault on their safehouse',
-        toNumber(e.hq.value) < match.tune.hqIntegrity.value,
-      );
-      beat(
-        'rival first assault on your safehouse',
-        toNumber(p.hq.value) < match.tune.hqIntegrity.value,
-      );
-      beat(
-        'safehouse full (no home hire left)',
-        p.econ.getProducer('hustler')!.purchasable!.maxed.value,
-      );
-      beat(
-        'hustlers plateau (no owned node has a hire that pays)',
-        !hustlersPay(p, PLAYER_PERSONA),
-      );
-      if (hustlers < lastHustlers) beat(`hustlers laid off (${lastHustlers} → ${hustlers})`, true);
-      lastHustlers = hustlers;
-      peakArmyP = Math.max(peakArmyP, armySize(p));
-      peakArmyE = Math.max(peakArmyE, armySize(e));
-      return match.phase.value === 'won' || match.phase.value === 'lost';
-    },
-  });
+        const hustlers = p.hustlers();
+        beat('first hustler bought', hustlers > 5);
+        beat('first ley tap', toNumber(p.econ.getProducer('ley-tap')!.count.value) > 0);
+        beat('first training floor', p.floorCount() > 0);
+        beat(
+          'first unit trained',
+          UNIT_KINDS.some((k) => readyUnits(p, k) > 0) || armySize(p) >= 1,
+        );
+        beat('first gate gun', p.turretLevel() > 1);
+        beat('rival first gate gun', e.turretLevel() > 1);
+        beat(
+          'first sentry nest',
+          p.nests.some((n) => toNumber(n.hp.value) > 0),
+        );
+        beat(
+          'rival first sentry nest',
+          e.nests.some((n) => toNumber(n.hp.value) > 0),
+        );
+        beat('crew chartered (tier two)', p.chartered());
+        beat('rival chartered', e.chartered());
+        for (const b of p.barracks.getAll())
+          beat(`${b.def.name} opens ${b.def.trains}s`, toNumber(b.producer.count.value) > 0);
+        for (const r of p.research.getAll())
+          beat(`research: ${r.def.name}`, r.purchasable.active.value);
+        beat(
+          'supply cap binds (a converter limited by room)',
+          match.clock.value > 0 &&
+            p.barracks.getAll().some((b) => b.producer.bottleneck?.value === 'capacity'),
+        );
+        beat('first squat', toNumber(p.squats.count.value) > 0);
+        beat(
+          'army reaches a siege force plus a holding squad',
+          armySize(p) >= MIN_SIEGE_FORCE + REF_PRESENCE,
+        );
+        beat(
+          'first clash',
+          DISTRICTS.some(
+            (_, i) =>
+              total(countsOf(p.squads[i])) > PRESENCE && total(countsOf(e.squads[i])) > PRESENCE,
+          ),
+        );
+        for (let i = 0; i < DISTRICTS.length; i++) {
+          beat(`you take ${DISTRICTS[i].name}`, match.control[i].value >= 1);
+          beat(`rival takes ${DISTRICTS[i].name}`, match.control[i].value <= -1);
+        }
+        beat(
+          'your first assault on their safehouse',
+          toNumber(e.hq.value) < match.tune.hqIntegrity.value,
+        );
+        beat(
+          'rival first assault on your safehouse',
+          toNumber(p.hq.value) < match.tune.hqIntegrity.value,
+        );
+        beat(
+          'safehouse full (no home hire left)',
+          p.econ.getProducer('hustler')!.purchasable!.maxed.value,
+        );
+        beat(
+          'hustlers plateau (no owned node has a hire that pays)',
+          !hustlersPay(p, PLAYER_PERSONA),
+        );
+        if (hustlers < lastHustlers)
+          beat(`hustlers laid off (${lastHustlers} → ${hustlers})`, true);
+        lastHustlers = hustlers;
+        peakArmyP = Math.max(peakArmyP, armySize(p));
+        peakArmyE = Math.max(peakArmyE, armySize(e));
+        return match.phase.value === 'won' || match.phase.value === 'lost';
+      },
+    });
+  } finally {
+    unseat();
+  }
   const outcome =
     run.terminated === 'predicate' ? (match.phase.value as 'won' | 'lost') : 'stalled';
   beat(`match ends: ${outcome}`, true);

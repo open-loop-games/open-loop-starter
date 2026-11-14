@@ -8,14 +8,14 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { toNumber } from '@open-loop/engine';
+import { runUntil, toNumber } from '@open-loop/engine';
 import { createSkirmishEngine } from '../engine';
 import { getMatch, getRoster } from '../modules';
-import { MAX_MATCH_S, TICK, staffMatch } from '../balance/_game';
+import { MAX_MATCH_S, TICK, playerTurn, seatPlayer } from '../balance/_game';
 
 const { engine } = createSkirmishEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 
 const match = getMatch();
 getRoster().choose(0);
@@ -35,15 +35,25 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
-while (match.phase.value === 'live' && match.clock.value < MAX_MATCH_S && next < BEATS.length) {
-  staffMatch({ match });
-  engine.tickDriver.processInterval(TICK);
-  if (BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(`${file} at match second ${match.clock.value}`);
-    next++;
-  }
+playerTurn({ match });
+const unseat = seatPlayer({ engine, match });
+try {
+  runUntil({
+    engine,
+    tickDelta: TICK,
+    maxSimTime: MAX_MATCH_S,
+    until: ({ iteration }) => {
+      if (iteration > 0 && BEATS[next]!.at()) {
+        const { file } = BEATS[next]!;
+        writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+        console.log(`${file} at match second ${match.clock.value}`);
+        next++;
+      }
+      return next === BEATS.length || match.phase.value !== 'live';
+    },
+  });
+} finally {
+  unseat();
 }
 if (next < BEATS.length)
   throw new Error(`stopped at ${match.phase.value} before beat ${BEATS[next]!.file}`);

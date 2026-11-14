@@ -14,7 +14,7 @@ import { TuningRegistriesKey } from '@open-loop/engine';
 import { runUntil } from '@open-loop/engine/harness';
 import { formatSpread, seedBatch, spreadOf } from '@/balance';
 import { CONTRACTS } from '../data/contracts';
-import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
+import { MAX_MATCH_S, TICK, buildGame, playerTurn, seatPlayer } from './_game';
 
 declare const process: { argv: string[]; exit(code: number): never };
 
@@ -62,15 +62,18 @@ function playSet(seed: number): Played[] {
     game.roster.choose(idx);
     game.match.start();
     const live = () => game.match.phase.value !== 'won' && game.match.phase.value !== 'lost';
-    runUntil({
-      engine: game.engine,
-      tickDelta: TICK,
-      maxSimTime: MAX_MATCH_S,
-      until: () => {
-        staffMatch(game);
-        return !live();
-      },
-    });
+    playerTurn(game);
+    const unseat = seatPlayer(game);
+    try {
+      runUntil({
+        engine: game.engine,
+        tickDelta: TICK,
+        maxSimTime: MAX_MATCH_S,
+        until: () => !live(),
+      });
+    } finally {
+      unseat();
+    }
     const result = { won: game.match.phase.value === 'won', end: game.match.clock.value };
     game.match.nextMatch();
     return result;

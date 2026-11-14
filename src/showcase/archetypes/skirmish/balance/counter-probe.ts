@@ -20,7 +20,7 @@ import { spreadOf } from '@/balance';
 import { CONTRACTS, PLAYER_PERSONA } from '../data/contracts';
 import { EFFECTIVENESS, UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
 import type { Side } from '../modules/side';
-import { MAX_MATCH_S, TICK, buildGame, staffMatch } from './_game';
+import { MAX_MATCH_S, TICK, buildGame, playerTurn, seatPlayer } from './_game';
 
 declare const process: { argv: string[]; exit(code: number): never };
 
@@ -65,24 +65,29 @@ function play(contract: number, income: number) {
   m.start();
   let logFit = 0;
   let samples = 0;
-  runUntil({
-    engine: game.engine,
-    tickDelta: TICK,
-    maxSimTime: MAX_MATCH_S,
-    until: () => {
-      staffMatch(game);
-      const p = army(m.p);
-      const e = army(m.e);
-      if (
-        UNIT_KINDS.reduce((n, k) => n + p[k], 0) > 3 &&
-        UNIT_KINDS.reduce((n, k) => n + e[k], 0) > 3
-      ) {
-        logFit += Math.log(hits(p, e) / hits(e, p));
-        samples += 1;
-      }
-      return m.phase.value !== 'live';
-    },
-  });
+  playerTurn(game);
+  const unseat = seatPlayer(game);
+  try {
+    runUntil({
+      engine: game.engine,
+      tickDelta: TICK,
+      maxSimTime: MAX_MATCH_S,
+      until: () => {
+        const p = army(m.p);
+        const e = army(m.e);
+        if (
+          UNIT_KINDS.reduce((n, k) => n + p[k], 0) > 3 &&
+          UNIT_KINDS.reduce((n, k) => n + e[k], 0) > 3
+        ) {
+          logFit += Math.log(hits(p, e) / hits(e, p));
+          samples += 1;
+        }
+        return m.phase.value !== 'live';
+      },
+    });
+  } finally {
+    unseat();
+  }
   const result = { phase: m.phase.value, end: m.clock.value, fit: samples ? logFit / samples : 0 };
   CONTRACTS[contract]!.incomeMult = INCOME[contract]!;
   game.dispose();
