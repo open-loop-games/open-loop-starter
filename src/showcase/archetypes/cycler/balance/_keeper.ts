@@ -23,7 +23,14 @@
  * specs; this plays whole watches and reads magnitudes.
  */
 
-import { runUntil, seedRNG, toNumber, type Engine } from '@open-loop/engine';
+import {
+  createThrottle,
+  runUntil,
+  seedRNG,
+  toNumber,
+  type Engine,
+  type RunUntilResult,
+} from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -51,6 +58,8 @@ import {
 
 /** Sim seconds per runner step. */
 export const DT = 1;
+/** Game seconds between the keeper's turns. */
+export const KEEPER_EVERY = 1;
 export const INTERVAL_RATE = 4;
 
 export interface Game {
@@ -178,7 +187,7 @@ function siteBoard(w: WatchApi): boolean {
   return true;
 }
 
-export function keeperDay(w: WatchApi, policy: KeeperPolicy): void {
+function keeperDay(w: WatchApi, policy: KeeperPolicy): void {
   const left = w.phaseLength.value - w.clock.value;
   if (w.boat.value === 'out') {
     if (w.wreck.value <= 0 || left <= SEA.rowSeconds + ROW_MARGIN) w.rowHome();
@@ -202,7 +211,7 @@ export function keeperDay(w: WatchApi, policy: KeeperPolicy): void {
   if (policy.rows && w.wreck.value > 0 && left > 2 * SEA.rowSeconds + ROW_MARGIN + 10) w.rowOut();
 }
 
-export function keeperNight(w: WatchApi, policy: KeeperPolicy): void {
+function keeperNight(w: WatchApi, policy: KeeperPolicy): void {
   if (!policy.shores) return;
   const q = w.quarter.value;
   const leakTonight = w.storm.value - (w.wards.value[q] + w.shored.value[q]);
@@ -212,6 +221,26 @@ export function keeperNight(w: WatchApi, policy: KeeperPolicy): void {
     toNumber(w.salvage.value) >= w.shoreCost.value
   )
     w.shoreUp();
+}
+
+/**
+ * Seats the keeper on the engine's tick driver: every `KEEPER_EVERY` game seconds it works
+ * the day or the night. The cadence holds while no tick is longer than `KEEPER_EVERY`,
+ * whatever `tickDelta` the runner steps by, and a runner's `until` stays a read.
+ *
+ * @returns the function that unseats the keeper; call it when the run ends.
+ */
+export function seatKeeper(
+  g: Pick<Game, 'engine' | 'watch'>,
+  policy: KeeperPolicy = REFERENCE_POLICY,
+): () => void {
+  const w = g.watch;
+  const turn = createThrottle({ interval: KEEPER_EVERY });
+  return g.engine.tickDriver.onTick((dt) => {
+    if (!turn.ready(dt)) return;
+    if (w.phase.value === 'day') keeperDay(w, policy);
+    if (w.phase.value === 'night') keeperNight(w, policy);
+  });
 }
 
 /** The road to the closing posting, bought in order, saving for each step. */
@@ -292,71 +321,83 @@ export function playWatch(
   let lastIntegrity = toNumber(w.integrity.value);
   let nightLeak = 0;
   let nightShored = 0;
+  // The keeper mends in the dawn turn, before the dawn read; the tower as the night left it
+  // is the night's lowest read.
+  let nightLow = lastIntegrity;
   beat(
     `watch begins at ${w.posting.value.name}, g ${w.g.value.toFixed(3)}, W0 ${fixed(w.storm.value)}, ` +
       `integrity ${lastIntegrity.toFixed(0)}, salvage ${toNumber(w.salvage.value).toFixed(0)}`,
   );
 
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // keeper's step, which `'uniform'` mode runs before every advance.
-  const run = runUntil({
-    engine: g.engine,
-    tickDelta: DT,
-    maxSimTime: maxSeconds,
-    until: ({ iteration, simTime }) => {
-      // Iteration 0 is the state the opening beat above already read.
-      if (iteration === 0) return false;
-      t = simTime;
-      if (w.cycle.count.value > keptBefore) return true;
-      const integrity = toNumber(w.integrity.value);
-      if (integrity < lastIntegrity) nightLeak += lastIntegrity - integrity;
-      nightShored = Math.max(nightShored, w.shored.value[w.quarter.value]);
-      lastIntegrity = integrity;
-      if (w.boat.value !== lastBoat) {
-        if (w.boat.value === 'out') rows++;
-        lastBoat = w.boat.value;
-      }
-      if (w.phase.value !== lastPhase) {
-        const q = w.quarter.value;
-        if (w.phase.value === 'night') {
-          if (w.caughtOut.value) caught++;
-          const kind = w.spray.value ? ` spray ${Math.round(w.spray.value * 100)}%` : '';
-          const back = w.backQuarter.value ? ` backing ${w.backQuarter.value}` : '';
-          beat(
-            `dusk → night ${w.night.value}: storm ${fixed(w.storm.value)} from ${q}${back}${kind}, ` +
-              `ward ${fixed(w.wards.value[q])} + screens ${fixed(w.screens.value[q])}, ` +
-              `salvage ${toNumber(w.salvage.value).toFixed(0)}, pieces ${w.placed.value.length}` +
-              (w.caughtOut.value ? ', caught out' : ''),
-          );
-          nightLeak = 0;
-          nightShored = 0;
-        } else if (w.phase.value === 'day') {
-          beat(
-            `dawn → day ${w.night.value}: night leaked ${fixed(nightLeak)}, ` +
-              `tower ${integrity.toFixed(0)}/${w.integrityMax.value.toFixed(0)}, ` +
-              `shored +${nightShored.toFixed(0)} ward`,
-          );
+  const unseat = seatKeeper(g, policy);
+  let run: RunUntilResult;
+  try {
+    run = runUntil({
+      engine: g.engine,
+      tickDelta: DT,
+      maxSimTime: maxSeconds,
+      until: ({ iteration, simTime }) => {
+        // Iteration 0 is the state the opening beat above already read.
+        if (iteration === 0) return false;
+        t = simTime;
+        if (w.cycle.count.value > keptBefore) return true;
+        const integrity = toNumber(w.integrity.value);
+        if (integrity < lastIntegrity) nightLeak += lastIntegrity - integrity;
+        nightShored = Math.max(nightShored, w.shored.value[w.quarter.value]);
+        lastIntegrity = integrity;
+        if (w.phase.value === 'night') nightLow = Math.min(nightLow, integrity);
+        if (w.boat.value !== lastBoat) {
+          if (w.boat.value === 'out') rows++;
+          lastBoat = w.boat.value;
         }
-        lastPhase = w.phase.value;
-      }
-      for (const p of w.placed.value)
-        if (!seenKinds.has(p.kind)) {
-          seenKinds.add(p.kind);
-          beat(`first ${p.kind} placed`);
+        if (w.phase.value !== lastPhase) {
+          const q = w.quarter.value;
+          if (w.phase.value === 'night') {
+            if (w.caughtOut.value) caught++;
+            const kind = w.spray.value ? ` spray ${Math.round(w.spray.value * 100)}%` : '';
+            const back = w.backQuarter.value ? ` backing ${w.backQuarter.value}` : '';
+            beat(
+              `dusk → night ${w.night.value}: storm ${fixed(w.storm.value)} from ${q}${back}${kind}, ` +
+                `ward ${fixed(w.wards.value[q])} + screens ${fixed(w.screens.value[q])}, ` +
+                `salvage ${toNumber(w.salvage.value).toFixed(0)}, pieces ${w.placed.value.length}` +
+                (w.caughtOut.value ? ', caught out' : ''),
+            );
+            nightLeak = 0;
+            nightShored = 0;
+            nightLow = integrity;
+          } else if (w.phase.value === 'day') {
+            beat(
+              `dawn → day ${w.night.value}: night leaked ${fixed(nightLeak)}, ` +
+                `tower ${nightLow.toFixed(0)}/${w.integrityMax.value.toFixed(0)}, ` +
+                `shored +${nightShored.toFixed(0)} ward`,
+            );
+          }
+          lastPhase = w.phase.value;
         }
-      if (!sawFind && w.offer.value.length === 0 && w.night.value > 1 && w.phase.value === 'day') {
-        sawFind = true;
-        beat('first find taken from the tideline');
-      }
-      if (w.relief.value && !signalled) {
-        signalled = true;
-        beat(`the relief is signalled on day ${w.night.value}: the final gale tonight`);
-      }
-      if (w.phase.value === 'day') keeperDay(w, policy);
-      if (w.phase.value === 'night') keeperNight(w, policy);
-      return false;
-    },
-  });
+        for (const p of w.placed.value)
+          if (!seenKinds.has(p.kind)) {
+            seenKinds.add(p.kind);
+            beat(`first ${p.kind} placed`);
+          }
+        if (
+          !sawFind &&
+          w.offer.value.length === 0 &&
+          w.night.value > 1 &&
+          w.phase.value === 'day'
+        ) {
+          sawFind = true;
+          beat('first find taken from the tideline');
+        }
+        if (w.relief.value && !signalled) {
+          signalled = true;
+          beat(`the relief is signalled on day ${w.night.value}: the final gale tonight`);
+        }
+        return false;
+      },
+    });
+  } finally {
+    unseat();
+  }
   if (run.terminated !== 'predicate') return null;
   const s = g.logbook.lastWatch.value!;
   const end =

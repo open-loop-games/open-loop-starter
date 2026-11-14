@@ -11,17 +11,17 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { seedRNG, toNumber } from '@open-loop/engine';
+import { runUntil, seedRNG, toNumber } from '@open-loop/engine';
 import { createCyclerEngine } from '../engine';
 import { getWatch } from '../modules';
-import { DT, REFERENCE_POLICY, keeperDay, keeperNight } from '../balance/_keeper';
+import { DT, seatKeeper } from '../balance/_keeper';
 
 const SEED = 1;
 const MAX_SECONDS = 3600;
 
 const { engine } = createCyclerEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 seedRNG(SEED);
 
 const watch = getWatch();
@@ -53,16 +53,24 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
-for (let t = 0; t < MAX_SECONDS && next < BEATS.length; t += DT) {
-  engine.tickDriver.processInterval(DT);
-  if (watch.phase.value === 'day') keeperDay(watch, REFERENCE_POLICY);
-  if (watch.phase.value === 'night') keeperNight(watch, REFERENCE_POLICY);
-  if (BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(`${file} at ${t + DT}s, night ${watch.night.value} ${watch.phase.value}`);
-    next++;
-  }
+const unseat = seatKeeper({ engine, watch });
+try {
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: MAX_SECONDS,
+    until: ({ iteration, simTime }) => {
+      if (iteration > 0 && BEATS[next]!.at()) {
+        const { file } = BEATS[next]!;
+        writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+        console.log(`${file} at ${simTime}s, night ${watch.night.value} ${watch.phase.value}`);
+        next++;
+      }
+      return next === BEATS.length;
+    },
+  });
+} finally {
+  unseat();
 }
 if (next < BEATS.length) throw new Error(`stopped before beat ${BEATS[next]!.file}`);
 engine.dispose();

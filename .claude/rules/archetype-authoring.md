@@ -236,7 +236,7 @@ Each axis has one canonical answer and one archetype to copy it from:
 | Behavioral suites | `modules/<name>.test.ts`, beside the module, importing `sim/harness.ts` | `skirmish` |
 | Test harness | `sim/harness.ts` → bare `boot()` / `tick()` / `tickUntil()` over this archetype's modules | `_blank` |
 | Runnable projection | `<name>-projection.ts` where the closed form is worth executing | `cycler` |
-| Probes | `<concern>-probe.ts` under `balance/`, run on the balance harness (`runUntil`, per-step work in `until`) and printed with `@/balance` and `formatClock`; print, never assert | `cycler`; `_blank` for the minimal case |
+| Probes | `<concern>-probe.ts` under `balance/`, run on the balance harness (`runUntil` whose `until` only reads; the automated player a tick handler, seated per run) and printed with `@/balance` and `formatClock`; print, never assert | `cycler`; `_blank` for the minimal case |
 | Balance orientation | `BALANCING.md` beside `IDENTITY.md`, five required sections, final state only | `looper` |
 | Boot | `createApp(overrides?) → { app, engine, mount }` | any — all agree |
 
