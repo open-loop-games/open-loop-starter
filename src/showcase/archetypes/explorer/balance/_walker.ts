@@ -4,8 +4,9 @@
  * The greedy walker: shop, then walk to the best reachable tile, hunt what is
  * there, and go home when the pack fills. The walker is balance-harness
  * tooling, not a mechanic. Spoor ships no automation, and no player-facing
- * tier would walk for you. The arc probe records an arc under it; the games
- * site's beat script saves at the arc's beats.
+ * tier would walk for you. `seatWalker` runs it on the engine's tick driver.
+ * The arc probe records an arc under it; the games site's beat script saves at
+ * the arc's beats.
  *
  * The walker stands in for the spine's reference player, so its rules are the
  * spine's assumptions:
@@ -20,7 +21,7 @@
  * `FIELD_FACTOR` is measured under these rules: change them and re-solve it.
  */
 
-import { toNumber, type GridCoord } from '@open-loop/engine';
+import { createThrottle, toNumber, type Engine, type GridCoord } from '@open-loop/engine';
 import { ANCHORS, LODGE, MAP_W, racksFor, speciesById, type GearId } from '../data';
 import { getChronicle, getHuntsman, getLodge, getWold } from '../modules';
 
@@ -36,7 +37,7 @@ const GEAR_ORDER: GearId[] = [
 ];
 
 export interface Walker {
-  /** One decision; call it after every tick. */
+  /** One decision; `seatWalker` takes one every `WALKER_EVERY` game seconds. */
   step(): void;
   /** the deepest band entered */
   deepestBand(): number;
@@ -257,4 +258,23 @@ export function createWalker(): Walker {
       return walkingToChart;
     },
   };
+}
+
+/** Game seconds between the walker's decisions: every probe tick, so no finished step waits. */
+export const WALKER_EVERY = 0.25;
+
+/**
+ * Seats the walker on the engine's tick driver: it takes one decision every `WALKER_EVERY`
+ * game seconds. The cadence holds while no tick is longer than `WALKER_EVERY`, whatever
+ * `tickDelta` the runner steps by, and a runner's `until` stays a read.
+ *
+ * @param engine - the running engine whose modules the walker works
+ * @param walker - the walker to seat, so a probe can read its band and its walk
+ * @returns the function that unseats the walker; call it when the run ends.
+ */
+export function seatWalker(engine: Engine, walker: Walker = createWalker()): () => void {
+  const turn = createThrottle({ interval: WALKER_EVERY });
+  return engine.tickDriver.onTick((dt) => {
+    if (turn.ready(dt)) walker.step();
+  });
 }
