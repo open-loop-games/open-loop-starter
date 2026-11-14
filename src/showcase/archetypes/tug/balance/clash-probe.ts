@@ -34,8 +34,6 @@ function clash(a: TroopId, sa: number, b: TroopId, sb: number) {
   const any = (side: 'player' | 'rival') => g.causeway.members.value.some((m) => m.side === side);
   let spentA = 0;
   let spentB = 0;
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // tally's step, which `'uniform'` mode runs before every advance.
   runUntil({
     engine: g.engine,
     tickDelta: DT,

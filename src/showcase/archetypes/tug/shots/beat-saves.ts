@@ -9,7 +9,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { seedRNG } from '@open-loop/engine';
+import { runUntil, seedRNG } from '@open-loop/engine';
 import { FIELDS } from '../data';
 import { createTugEngine } from '../engine';
 import { formatClock } from '@/composables/useFormatting';
@@ -23,7 +23,7 @@ const MAX_SECONDS = 900;
 seedRNG(0);
 const { engine } = createTugEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 seedRNG(SEED);
 const g = wrapGame(engine, () => engine.dispose());
 seatMarshal(g);
@@ -64,11 +64,17 @@ const check = () => {
 for (let b = 0; b < MAX_BATTLES && next < BEATS.length; b++) {
   const before = g.chronicle.battles.value;
   g.battle.start();
-  for (let t = 0; t < MAX_SECONDS && g.chronicle.battles.value === before; t += DT) {
-    engine.tickDriver.advanceTime(DT);
-    session += DT;
-    if (g.battle.phase.value === 'battle') check();
-  }
+  const start = session;
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: MAX_SECONDS,
+    until: ({ iteration, simTime }) => {
+      session = start + simTime;
+      if (iteration > 0 && g.battle.phase.value === 'battle') check();
+      return g.chronicle.battles.value !== before;
+    },
+  });
   marshalBetweenBattles(g.chronicle); // camp beats are saved with the boons bought
   check();
 }

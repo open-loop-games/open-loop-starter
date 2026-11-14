@@ -38,8 +38,6 @@ export function record(run: (typeof runs)[number]): Record<number, number | null
     g.battle.start();
     if (vesk) mark(6, session);
     const over = () => g.chronicle.battles.value !== before;
-    // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-    // recorder's step, which `'uniform'` mode runs before every advance.
     const battle = runUntil({
       engine: g.engine,
       tickDelta: DT,

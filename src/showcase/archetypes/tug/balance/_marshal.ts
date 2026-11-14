@@ -144,8 +144,6 @@ export function playBattle(g: Game, maxSeconds = 900, first?: Side): BattleOutco
   const samples: Second[] = [];
   let next = 1;
   const over = () => g.chronicle.battles.value !== before;
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // sampler's step, which `'uniform'` mode runs before every advance.
   const run = runUntil({
     engine: g.engine,
     tickDelta: DT,
