@@ -60,11 +60,11 @@ export const manifest: ArchetypeManifest = {
   beats: [
     { n: 1, label: 'First pushcart', recordedFireTimeRange: [5, 5] },
     { n: 2, label: 'Sales desk hired', recordedFireTimeRange: [151, 151] },
-    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [266.5, 266.5] },
+    { n: 3, label: 'Acquisitions desk hired', recordedFireTimeRange: [266, 266] },
     { n: 4, label: 'Board of Directors hired', recordedFireTimeRange: [565, 571.5] },
     { n: 5, label: 'The top tier: first savings bank', recordedFireTimeRange: [761.5, 767] },
     { n: 6, label: 'The Consolidated Building offered', recordedFireTimeRange: [12921.5, 13294] },
-    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13730, 14067.5] },
+    { n: 7, label: 'The Consolidated Building bought', recordedFireTimeRange: [13729.5, 14067] },
   ],
 
   shell: 'ColumnShell · left + right',

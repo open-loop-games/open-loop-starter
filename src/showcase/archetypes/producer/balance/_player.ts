@@ -1,5 +1,5 @@
 /**
- * The spine's reference player, one step at a time, through the game's own
+ * The spine's reference player, one turn at a time, through the game's own
  * verbs. The arc probe times its beats; the games site's beat script saves at
  * them.
  *
@@ -13,10 +13,10 @@
  * acquisitions desk and the board home, buys nothing else, and buys the ending
  * when the cash is there.
  *
- * The caller advances the engine by `dt` sim seconds after each step.
+ * `seatPlayer` runs it on the engine's tick driver, one turn every `every` game seconds.
  */
 
-import { createSeededRNG, type Engine } from '@open-loop/engine';
+import { createSeededRNG, createThrottle, type Engine } from '@open-loop/engine';
 import {
   AutomationKey,
   FirmKey,
@@ -27,9 +27,12 @@ import {
 } from '../modules';
 import { ACTIVE_DEAL_RATE, REFERENCE_CATCH, type HireId } from '../data';
 
+/** Game seconds between the reference player's turns in the arc: the hand acts four times a second. */
+export const PLAYER_EVERY = 0.25;
+
 export interface PlayerOptions {
-  /** Sim seconds between steps. */
-  dt: number;
+  /** Game seconds between turns; the hand's deals accrue over them. Default: `PLAYER_EVERY`. */
+  every?: number;
   /** Deals per second the hand closes before the sales desk. */
   dealRate?: number;
   /** Share of tips the player catches. Default: the reference player's. */
@@ -40,15 +43,25 @@ export interface PlayerOptions {
   seed?: number;
 }
 
-/**
- * Binds the player to an engine's producer modules; call `step` once per `dt`.
- * `step` returns the units and phones the hand bought, before the acquisitions desk.
- */
+/** The reference player bound to one engine. Its state carries from turn to turn. */
+export interface ReferencePlayer {
+  /** Game seconds between turns. */
+  readonly every: number;
+  /** Takes one turn; returns the units and phones the hand bought, before the acquisitions desk. */
+  turn(): number;
+}
+
+/** Binds the player to an engine's producer modules; `seatPlayer` takes its turns. */
 export function createReferencePlayer(
   engine: Engine,
-  options: PlayerOptions,
-): { step: () => number } {
-  const { dt, dealRate = ACTIVE_DEAL_RATE, catchRate = REFERENCE_CATCH, seed = 1 } = options;
+  options: PlayerOptions = {},
+): ReferencePlayer {
+  const {
+    every = PLAYER_EVERY,
+    dealRate = ACTIVE_DEAL_RATE,
+    catchRate = REFERENCE_CATCH,
+    seed = 1,
+  } = options;
   const firm = engine.tryInject(FirmKey)!;
   const automation = engine.tryInject(AutomationKey)!;
   const offline = engine.tryInject(OfflineKey)!;
@@ -67,7 +80,7 @@ export function createReferencePlayer(
   let tipSeen = false;
   let tipWanted = false;
 
-  function step(): number {
+  function turn(): number {
     let handBuys = 0;
 
     // A tip: the player decides once, when it comes up, whether this one is caught.
@@ -80,7 +93,7 @@ export function createReferencePlayer(
 
     // The hand: it deals until the sales desk takes over, and through every spree.
     if (!working('sales-desk') || spree.value) {
-      owedClicks += dt * dealRate;
+      owedClicks += every * dealRate;
       while (owedClicks >= 1) {
         owedClicks -= 1;
         firm.deal();
@@ -119,5 +132,34 @@ export function createReferencePlayer(
     return handBuys;
   }
 
-  return { step };
+  return { every, turn };
+}
+
+/**
+ * Seats a reference player on the engine's tick driver: it takes a turn every
+ * `player.every` game seconds. The cadence holds while no tick is longer than
+ * `player.every`, whatever `tickDelta` the runner steps by, and a runner's `until`
+ * stays a read.
+ *
+ * The seat's first turn closes the first tick. A run whose player acts at founding takes
+ * one `player.turn()` before its first advance. The player's state stays with `player`, so
+ * a probe can unseat it over a catch-up the player sleeps through, and seat it again on
+ * the return.
+ *
+ * @param engine - the running engine whose producer modules the player works
+ * @param player - the player to seat, from `createReferencePlayer` on the same engine
+ * @param onTurn - receives the units and phones each turn bought by hand, for a probe to count
+ * @returns the function that unseats the player; call it when the run ends.
+ */
+export function seatPlayer(
+  engine: Engine,
+  player: ReferencePlayer,
+  onTurn?: (handBuys: number) => void,
+): () => void {
+  const turn = createThrottle({ interval: player.every });
+  return engine.tickDriver.onTick((dt) => {
+    if (!turn.ready(dt)) return;
+    const handBuys = player.turn();
+    onTurn?.(handBuys);
+  });
 }
