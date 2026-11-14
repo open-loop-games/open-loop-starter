@@ -19,6 +19,7 @@
  * probe (`./packing-probe.ts`) measures the packing claims it reads.
  */
 
+import { formatClock } from '@/composables/useFormatting';
 import {
   ARC_END_S,
   BEACON_GAIN,
@@ -55,10 +56,6 @@ const ARC_TARGET_S: readonly [number, number] = [2 * 3600, 3 * 3600];
 
 const f = (n: number, d = 0) => n.toFixed(d);
 const e = (n: number) => n.toExponential(2);
-const clock = (t: number) => {
-  const s = Math.round(t);
-  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-};
 
 console.log('== strengths ==');
 console.log(
@@ -103,7 +100,7 @@ for (const [j, w] of WALK.entries()) {
           : `price ${e(sectionPrice(closes))}`;
   const warn = closes && w.adoption > w.to - w.from ? '  RAMP > GAP' : '';
   console.log(
-    `  ${w.stage.key.padEnd(28)} ${String(cellsWith(w.stage.ship, w.stage.sections)).padStart(5)} ${(w.stage.conditions.join('+') || 'calm').padEnd(22)} ${clock(w.from).padStart(8)} ${clock(w.to).padStart(8)} ${e(w.rateIn)} → ${e(w.rate)} ${e(w.spend)} ${e(w.fromSavings)} ${f(w.adoption).padStart(5)}  ${(closes ?? '-').padEnd(28)} ${what}${warn}`,
+    `  ${w.stage.key.padEnd(28)} ${String(cellsWith(w.stage.ship, w.stage.sections)).padStart(5)} ${(w.stage.conditions.join('+') || 'calm').padEnd(22)} ${formatClock(w.from).padStart(8)} ${formatClock(w.to).padStart(8)} ${e(w.rateIn)} → ${e(w.rate)} ${e(w.spend)} ${e(w.fromSavings)} ${f(w.adoption).padStart(5)}  ${(closes ?? '-').padEnd(28)} ${what}${warn}`,
   );
 }
 
@@ -112,11 +109,11 @@ for (const s of SHIPS) {
   const first = WALK.find((w) => w.stage.ship === s.id)!;
   const acts = s.acts.map((a) => {
     const last = a.beats[a.beats.length - 1]!;
-    return `${a.name} ends ${clock(BEAT_TIME[last]!)}`;
+    return `${a.name} ends ${formatClock(BEAT_TIME[last]!)}`;
   });
-  console.log(`  ${s.name} commissioned ${clock(first.from)} · ${acts.join(' · ')}`);
+  console.log(`  ${s.name} commissioned ${formatClock(first.from)} · ${acts.join(' · ')}`);
 }
 const [lo, hi] = ARC_TARGET_S;
 console.log(
-  `  the Dreadnought falls ${clock(ARC_END_S)} — target ${clock(lo)}–${clock(hi)}: ${ARC_END_S >= lo && ARC_END_S <= hi ? 'on schedule' : 'OFF SCHEDULE'}`,
+  `  the Dreadnought falls ${formatClock(ARC_END_S)} — target ${formatClock(lo)}–${formatClock(hi)}: ${ARC_END_S >= lo && ARC_END_S <= hi ? 'on schedule' : 'OFF SCHEDULE'}`,
 );

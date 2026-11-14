@@ -3,7 +3,9 @@
  * each beat's fire time. `pnpm beats packer` plays it beside the recorded windows.
  *
  * The game draws nothing at random, but a tick can carry a purchase or an engagement across
- * a boundary, so the recording spans the tick sizes the economy is robust to.
+ * a boundary, so the recording spans the tick sizes the economy is robust to. The engine
+ * splits an advance above its one-second `maxDeltaTime`, so at 2 s the fitter steps once
+ * per two engine ticks.
  */
 import { runArc } from './_fitter';
 

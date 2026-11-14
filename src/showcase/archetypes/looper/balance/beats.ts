@@ -11,8 +11,8 @@ import { runArc } from './_engine';
 export const runs = [{ nights: 17 }];
 
 /** Plays one run; each manifest beat's fire time in sim-seconds, by beat number. */
-export async function record(run: (typeof runs)[number]): Promise<Record<number, number | null>> {
-  const arc = await runArc(run.nights);
+export function record(run: (typeof runs)[number]): Record<number, number | null> {
+  const arc = runArc(run.nights);
   const first = (pattern: RegExp) => {
     const line = arc.beats.find((b) => pattern.test(b));
     return line ? Number(/^t=\s*([\d.]+)s/.exec(line)![1]) : null;

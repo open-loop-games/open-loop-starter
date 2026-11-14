@@ -8,7 +8,7 @@
  * for tick-by-tick behavioral specs; this records an arc and prints magnitudes.
  */
 
-import { Decimal } from '@open-loop/engine';
+import { Decimal, runUntil } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import { SKILLS, ZONES } from '../data';
@@ -45,7 +45,7 @@ export interface ArcRecord {
 }
 
 /** Play `nights` nights and record them. */
-export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<ArcRecord> {
+export function runArc(nights: number, maxSimSeconds = 3 * 3600): ArcRecord {
   const handle = bootTestEngine({
     modules: [...sharedBase, ...createLooperModules()],
     persistenceNamespacePrefix: 'looper-probe',
@@ -73,51 +73,64 @@ export async function runArc(nights: number, maxSimSeconds = 3 * 3600): Promise<
   player.begin();
   beat('first night begins');
 
-  while (night.cycle.count.value < nights && sim < maxSimSeconds) {
-    const before = night.cycle.count.value;
-    await handle.tick(1);
-    sim += DT;
+  /** Nights done before the latest advance; a rise after it is a night that ended. */
+  let before = night.cycle.count.value;
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // player's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: handle.engine,
+    tickDelta: DT,
+    maxSimTime: maxSimSeconds,
+    until: ({ iteration, simTime }) => {
+      if (iteration > 0) {
+        sim = simTime;
+        const nerve = num(night.nerve.value);
+        if (!Number.isFinite(nerve) || !Number.isFinite(night.work.value)) {
+          anomalies++;
+          if (anomalies < 5) beat(`ANOMALY nerve=${nerve} work=${night.work.value}`);
+        }
+        for (const z of ZONES)
+          if (!zonesSeen.has(z.id) && meta.zones.isUnlocked(z.id)) {
+            zonesSeen.add(z.id);
+            beat(`discovered ${z.displayName}`);
+          }
+        for (const t of automation.tiers.tiers)
+          if (!tiersSeen.has(t.id) && automation.tiers.isUnlocked(t.id)) {
+            tiersSeen.add(t.id);
+            beat(`automation tier unlocked: ${t.displayName}`);
+          }
 
-    const nerve = num(night.nerve.value);
-    if (!Number.isFinite(nerve) || !Number.isFinite(night.work.value)) {
-      anomalies++;
-      if (anomalies < 5) beat(`ANOMALY nerve=${nerve} work=${night.work.value}`);
-    }
-    for (const z of ZONES)
-      if (!zonesSeen.has(z.id) && meta.zones.isUnlocked(z.id)) {
-        zonesSeen.add(z.id);
-        beat(`discovered ${z.displayName}`);
+        if (night.cycle.count.value > before) {
+          const s = night.lastNight.value!;
+          beat(
+            `night ${s.night} ends (${s.cause}) after ${s.seconds.toFixed(1)}s, depth ${s.depth}${s.escaped ? ' — ESCAPED' : ''}, +${s.intel} intel`,
+          );
+          const bought = player.buy();
+          if (bought.length) {
+            if (!firstPurchase) beat(`first purchase: ${bought[0]}`);
+            firstPurchase = true;
+            beat(`bought ${bought.join(', ')}`);
+          }
+          const mastery =
+            SKILLS.reduce(
+              (a, k) => a + num(night.mastery.getSkill(k.id)!.lifetimeBonus!.value),
+              0,
+            ) / 4;
+          rows.push({ summary: s, mastery, bought });
+          player.replan();
+        }
+        // Routine owns the restart once bought; a long gap between nights is a stuck phase.
+        idle = night.nightActive.value ? 0 : idle + DT;
+        if (idle > 30) {
+          beat('STALL: no night has begun for 30s');
+          stalled = true;
+          return true;
+        }
       }
-    for (const t of automation.tiers.tiers)
-      if (!tiersSeen.has(t.id) && automation.tiers.isUnlocked(t.id)) {
-        tiersSeen.add(t.id);
-        beat(`automation tier unlocked: ${t.displayName}`);
-      }
-
-    if (night.cycle.count.value > before) {
-      const s = night.lastNight.value!;
-      beat(
-        `night ${s.night} ends (${s.cause}) after ${s.seconds.toFixed(1)}s, depth ${s.depth}${s.escaped ? ' — ESCAPED' : ''}, +${s.intel} intel`,
-      );
-      const bought = player.buy();
-      if (bought.length) {
-        if (!firstPurchase) beat(`first purchase: ${bought[0]}`);
-        firstPurchase = true;
-        beat(`bought ${bought.join(', ')}`);
-      }
-      const mastery =
-        SKILLS.reduce((a, k) => a + num(night.mastery.getSkill(k.id)!.lifetimeBonus!.value), 0) / 4;
-      rows.push({ summary: s, mastery, bought });
-      player.replan();
-    }
-    // Routine owns the restart once bought; a long gap between nights is a stuck phase.
-    idle = night.nightActive.value ? 0 : idle + DT;
-    if (idle > 30) {
-      beat('STALL: no night has begun for 30s');
-      stalled = true;
-      break;
-    }
-  }
+      before = night.cycle.count.value;
+      return night.cycle.count.value >= nights;
+    },
+  });
 
   handle.dispose();
   return { nights: rows, beats, simSeconds: sim, anomalies, stalled };

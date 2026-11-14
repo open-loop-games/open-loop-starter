@@ -22,7 +22,7 @@ const argv = (globalThis as { process?: { argv: string[] } }).process?.argv ?? [
 const NIGHTS = Number(argv[2] ?? 20);
 
 const t0 = performance.now();
-const arc = await runArc(NIGHTS);
+const arc = runArc(NIGHTS);
 const pred = predictArc(arc.nights.length);
 
 console.log('\n=== Beats ===');

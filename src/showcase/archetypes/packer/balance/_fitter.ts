@@ -28,7 +28,7 @@
  * tick-by-tick behavioral specs; this plays an arc and records magnitudes.
  */
 
-import { Decimal, toNumber, type Purchasable } from '@open-loop/engine';
+import { Decimal, runUntil, toNumber, type Purchasable } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -580,39 +580,48 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
 
   let ended: ArcRecord['ended'] = 'time';
   let anomaly: string | undefined;
-  while (sim < maxSimSeconds) {
-    handle.engine.tickDriver.tickOnce();
-    sim += dt;
-    const t = sim;
-    const e = line.engagement.value;
-    fitter.step();
-    const s = num(yard.salvage.value);
-    if (!Number.isFinite(s) || !Number.isFinite(board.salvageRate.value)) {
-      anomaly = `non-finite at t=${t}: salvage=${s} rate=${board.salvageRate.value}`;
-      ended = 'anomaly';
-      break;
-    }
-    if (num(yard.fabricator.totalCount.value) >= 1) mark(`${fleet.ship.value}:first purchase`, t);
-    for (const p of PIECES) if (p.unlock && yard.unlocked(p.id)) mark(p.unlock, t);
-    for (const { def, purchasable } of yard.hull.getAll())
-      if (purchasable.active.value) mark(def.id, t);
-    for (const { def, purchasable } of yard.refits.getAll())
-      if (purchasable.active.value) mark(def.id.replace(':', ':refit:'), t);
-    if (fleet.authoredFallen.value > 0) {
-      // A fallen authored carrier is marked by id, in breach-line order.
-      for (let i = 0; i < fleet.authoredFallen.value; i++) mark(CARRIERS[i]!.id, t);
-    }
-    if (trace && t % 60 === 0) {
-      lines.push(
-        `t=${t} ${fleet.ship.value} salvage=${s.toExponential(2)} rate=${board.salvageRate.value.toExponential(2)} fp=${board.firepower.value.toExponential(2)} cells=${board.placed.value.length}/${board.openCells.value} obj=${fitter.objective()} ${fleet.conditions.value.join('+') || 'calm'}${e ? ` ENGAGED ${e.remaining.toExponential(2)}` : ''}`,
-      );
-    }
-    if (fleet.storyEnded.value) {
-      snapshot();
-      ended = 'story';
-      break;
-    }
-  }
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // fitter's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: handle.engine,
+    tickDelta: dt,
+    maxSimTime: maxSimSeconds,
+    until: ({ iteration, simTime }) => {
+      // Iteration 0 is the cold start; the fitter first steps after the first tick.
+      if (iteration === 0) return false;
+      sim = simTime;
+      const t = sim;
+      const e = line.engagement.value;
+      fitter.step();
+      const s = num(yard.salvage.value);
+      if (!Number.isFinite(s) || !Number.isFinite(board.salvageRate.value)) {
+        anomaly = `non-finite at t=${t}: salvage=${s} rate=${board.salvageRate.value}`;
+        ended = 'anomaly';
+        return true;
+      }
+      if (num(yard.fabricator.totalCount.value) >= 1) mark(`${fleet.ship.value}:first purchase`, t);
+      for (const p of PIECES) if (p.unlock && yard.unlocked(p.id)) mark(p.unlock, t);
+      for (const { def, purchasable } of yard.hull.getAll())
+        if (purchasable.active.value) mark(def.id, t);
+      for (const { def, purchasable } of yard.refits.getAll())
+        if (purchasable.active.value) mark(def.id.replace(':', ':refit:'), t);
+      if (fleet.authoredFallen.value > 0) {
+        // A fallen authored carrier is marked by id, in breach-line order.
+        for (let i = 0; i < fleet.authoredFallen.value; i++) mark(CARRIERS[i]!.id, t);
+      }
+      if (trace && t % 60 === 0) {
+        lines.push(
+          `t=${t} ${fleet.ship.value} salvage=${s.toExponential(2)} rate=${board.salvageRate.value.toExponential(2)} fp=${board.firepower.value.toExponential(2)} cells=${board.placed.value.length}/${board.openCells.value} obj=${fitter.objective()} ${fleet.conditions.value.join('+') || 'calm'}${e ? ` ENGAGED ${e.remaining.toExponential(2)}` : ''}`,
+        );
+      }
+      if (fleet.storyEnded.value) {
+        snapshot();
+        ended = 'story';
+        return true;
+      }
+      return false;
+    },
+  });
   if (ended === 'time') snapshot();
   const record: ArcRecord = { beats, endedAt: sim, ended, anomaly, counts, boards, trace: lines };
   handle.dispose();
