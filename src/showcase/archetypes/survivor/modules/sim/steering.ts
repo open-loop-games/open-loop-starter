@@ -237,7 +237,7 @@ export const ROUTE_WAYPOINT_CELLS = 3;
  * The wall term: a ramp over the last two cells before the floor's edge. At the edge it costs
  * about three reversals, enough to turn a star off a wall the crowd is pressing it toward and
  * not enough to outvote contact. A weaker wall let the Veteran take 60–71% of its damage
- * within two cells of the edge (take-probe seeds 1–3, G and PG).
+ * within two cells of the edge (measured with `playTake` on seeds 1–3, G and PG).
  */
 const WALL_MARGIN = NAV_CELL * 2;
 const WALL_WEIGHT = 30;
