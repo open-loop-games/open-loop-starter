@@ -135,8 +135,6 @@ export function playTake(
   take.startTake({ ...options, driver: options.driver ?? 'instinct' });
   const rewrites: number[] = [];
   let level = toNumber(take.rewrites.level.value);
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // probe's step, which `'uniform'` mode runs before every advance.
   const run = runUntil({
     engine,
     tickDelta: TICK,

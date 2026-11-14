@@ -122,9 +122,7 @@ The real-time floor is consumer-side by the engine's design; `stepArena` is one 
 function the take module and the probes both call. Three hand-rolls carry `TODO(expansion)`
 markers: the rigs' cooldown dispatch (`modules/sim/arena.ts` `fireRigs`), k distinct weighted
 draws (`modules/sim/draft.ts` `drawOffer`) and the star's utility steering
-(`modules/sim/steering.ts`). The probes' process pool (`balance/_pool.ts`) is a fourth, and
-the probes' `runUntil` calls, which carry the star's step in `until`, are a fifth
-(`balance/_set.ts` `playTake`, the cone and steering probes).
+(`modules/sim/steering.ts`). The probes' process pool (`balance/_pool.ts`) is a fourth.
 
 ## Balance model
 

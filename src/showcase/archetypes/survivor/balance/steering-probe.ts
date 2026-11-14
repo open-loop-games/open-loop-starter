@@ -62,8 +62,6 @@ function read(job: Job): Reading {
   let reversals = 0;
   let last = a.player.facing;
   const recent: number[] = [];
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // probe's step, which `'uniform'` mode runs before every advance.
   const run = runUntil({
     engine,
     tickDelta: TICK,

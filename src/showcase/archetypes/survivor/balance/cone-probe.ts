@@ -65,8 +65,6 @@ function read(job: Job): Reading {
   let slot = a.rigs.find((r) => r.def.id === GAG.id)!;
   let caught = 0;
   let best = 0;
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // probe's step, which `'uniform'` mode runs before every advance.
   const run = runUntil({
     engine,
     tickDelta: TICK,
