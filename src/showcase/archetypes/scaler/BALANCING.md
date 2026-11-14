@@ -110,5 +110,5 @@ anything that acts once per tick.
 - **Most Elseworld tiers resolve in seconds, not two minutes.** The reference enters on
   the first fresh timeline past the slot that is strong enough, which is usually much
   stronger than the slot's sizing. A goal is a minimum, not a duration.
-- **The tier openings run behind the ladder model.** The engine opens tiers 4–18% after
+- **The tier openings run behind the ladder model.** The engine opens tiers 4–16% after
   the spine; `hold` absorbs the interleaving only on average.

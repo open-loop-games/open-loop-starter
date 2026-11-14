@@ -66,8 +66,8 @@ no RNG, so one run is the measurement.
 | First Rewrite | 26m01s | 25m31s |
 | The Silver Age | 1h45m42s | 1h40m40s |
 | The Bronze Age | 2h36m48s | 2h30m45s |
-| The Dark Age | 3h18m22s | 3h12m42s |
-| The Modern Age, the end beat | 4h02m39s | 3h56m02s |
+| The Dark Age | 3h18m22s | 3h12m41s |
+| The Modern Age, the end beat | 4h02m39s | 3h56m01s |
 
 An Elseworld tier comes up about every nine minutes from 0:16 to 3:57. Play goes on past
 the Modern Age, each Age's gate growing by the last.

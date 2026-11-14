@@ -1,13 +1,20 @@
 /**
  * Shared probe fixture, not runnable on its own. Builds a real scaler engine and
- * plays the arc on it under the reference player (`../modules/reference-player.ts`).
+ * plays the arc on it under the reference player (`../modules/reference-player.ts`),
+ * which `seatReferencePlayer` runs on the engine's tick driver.
  *
  * This is not a duplicate of `../sim/harness.ts`. That boots the module list for
  * tick-by-tick behavioral specs; this assembles an instrumented arc runner that
  * records beats and reads magnitudes.
  */
 
-import { Decimal, runUntil, type DecimalSource, type Engine } from '@open-loop/engine';
+import {
+  Decimal,
+  createThrottle,
+  runUntil,
+  type DecimalSource,
+  type Engine,
+} from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -30,6 +37,7 @@ import {
   type LegacyApi,
   type LegendsApi,
   type PrestigeApi,
+  type ReferencePlayer,
   type RunApi,
 } from '../modules';
 import { TIERS } from '../data';
@@ -38,6 +46,8 @@ import { TIERS } from '../data';
 export const DT = 0.5;
 /** Engine intervals per second. */
 export const INTERVAL_RATE = 20;
+/** Game seconds between the reference player's turns. */
+export const PLAYER_EVERY = 0.5;
 
 export const num = (x: DecimalSource) => Decimal.fromValue(x).toNumber();
 
@@ -96,6 +106,26 @@ export interface ArcResult {
 }
 
 /**
+ * Seats the reference player on the engine's tick driver: it takes a turn every
+ * `PLAYER_EVERY` game seconds, whatever `tickDelta` the runner steps by, and a runner's
+ * `until` stays a read. A tick longer than `PLAYER_EVERY` holds one turn, so at a coarser
+ * `tickDelta` the player turns once a tick.
+ *
+ * The game has no tick phases, so a turn runs after every module's own tick handler:
+ * it sees the state its tick left, and the next tick's modules see its writes.
+ *
+ * @param engine - the running engine whose modules the player works
+ * @param player - the player to seat; the caller keeps it to read what it entered
+ * @returns the function that unseats the player; call it when the run ends.
+ */
+export function seatReferencePlayer(engine: Engine, player: ReferencePlayer): () => void {
+  const turn = createThrottle({ interval: PLAYER_EVERY });
+  return engine.tickDriver.onTick((dt) => {
+    if (turn.ready(dt)) player.turn();
+  });
+}
+
+/**
  * Play the arc for `seconds`, one engine tick of `dt` per runner step. The caller
  * reads the end state off the returned APIs.
  */
@@ -145,7 +175,10 @@ export function runArc(seconds: number, dt = DT): ArcResult {
   let resetsBefore = 0;
   let deskRan = false;
 
-  /** Reads what the last advance did; true when the run must stop on an anomaly. */
+  /**
+   * Reads what the last advance did, the player's turn in it included; true when the run
+   * must stop on an anomaly.
+   */
   function readStep(): boolean {
     // A reset in the tick wipes the corps, so its recruits cannot be read off.
     if (deskRan && resets() === resetsBefore) {
@@ -211,29 +244,35 @@ export function runArc(seconds: number, dt = DT): ArcResult {
     return false;
   }
 
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // player's step, which `'uniform'` mode runs before every advance.
-  runUntil({
-    engine: handle.engine,
-    tickDelta: dt,
-    // The run ends on the game's own play clock; this cap only bounds the loop.
-    maxSimTime: seconds + dt,
-    until: ({ iteration }) => {
-      // Iteration 0 is the cold start: no advance yet, so nothing to read off.
-      if (iteration > 0 && readStep()) return true;
-      if (t() >= seconds) return true;
-      rebootsBefore = core.reboots.value;
-      rewritesBefore = core.rewrites.value;
-      agesBefore = core.ages.value;
-      continuityBefore = num(continuity.continuity.cumulative!.value);
-      canonBefore = num(canon.canon.cumulative!.value);
-      player.turn();
-      corpsBefore = corps();
-      resetsBefore = resets();
-      deskRan = deskOn();
-      return false;
-    },
-  });
+  // The opening turn, before any tick: the seat's first turn is inside the first tick.
+  player.turn();
+  const unseat = seatReferencePlayer(handle.engine, player);
+  try {
+    runUntil({
+      engine: handle.engine,
+      tickDelta: dt,
+      // The run ends on the game's own play clock; this cap only bounds the loop.
+      maxSimTime: seconds + dt,
+      until: ({ iteration }) => {
+        // Iteration 0 is the cold start: no advance yet, so nothing to read off.
+        if (iteration > 0 && readStep()) return true;
+        if (t() >= seconds) return true;
+        // The previous read: the next advance's resets, gains and recruits are measured
+        // against it.
+        rebootsBefore = core.reboots.value;
+        rewritesBefore = core.rewrites.value;
+        agesBefore = core.ages.value;
+        continuityBefore = num(continuity.continuity.cumulative!.value);
+        canonBefore = num(canon.canon.cumulative!.value);
+        corpsBefore = corps();
+        resetsBefore = resets();
+        deskRan = deskOn();
+        return false;
+      },
+    });
+  } finally {
+    unseat();
+  }
 
   return {
     beats,

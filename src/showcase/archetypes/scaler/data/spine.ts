@@ -38,7 +38,7 @@ export const ANCHORS = {
   /**
    * Units of a tier the run holds when it opens the next one. Fitted, not chosen:
    * the Dispatch Desk holds 5 when the next tier opens, and 4 lands the ladder
-   * model's openings within 4–18% of the engine's. The fractional hold absorbs
+   * model's openings within 4–16% of the engine's. The fractional hold absorbs
    * that the desk interleaves tiers where the ladder fills them in order.
    */
   // balance/arc-probe.ts § tier openings; the game has no RNG, so one run is the measurement

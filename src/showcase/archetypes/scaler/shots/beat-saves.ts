@@ -8,7 +8,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Decimal } from '@open-loop/engine';
+import { Decimal, runUntil } from '@open-loop/engine';
 import { createScalerEngine } from '../engine';
 import {
   createReferencePlayer,
@@ -19,14 +19,13 @@ import {
   getPrestige,
   getRun,
 } from '../modules';
+import { DT, seatReferencePlayer } from '../balance/_engine';
 
-/** The arc probe's step: one player turn, then one tick of this many seconds. */
-const STEP = 0.5;
 const MAX_SIM = 7200;
 
 const { engine } = createScalerEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 
 const core = getCore();
 const run = getRun();
@@ -63,19 +62,36 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
-while (t() < MAX_SIM && next < BEATS.length) {
-  player.turn();
-  engine.tickDriver.processInterval(STEP);
+/** Saves the next beat when its moment holds. It reads and exports; it writes no game state. */
+function saveBeat(): void {
+  if (next === BEATS.length) return;
   if (inElseworld('villain-uprising') && enteredAt === Infinity) enteredAt = t();
   if (core.ages.value >= 1 && agedAt === Infinity) agedAt = t();
-  if (BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(
-      `${file} at sim ${t().toFixed(1)}s, run ${run.runSeconds.value.toFixed(1)}s, reboots ${core.reboots.value}, rewrites ${core.rewrites.value}, ages ${core.ages.value}`,
-    );
-    next++;
-  }
+  if (!BEATS[next]!.at()) return;
+  const { file } = BEATS[next]!;
+  writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+  console.log(
+    `${file} at sim ${t().toFixed(1)}s, run ${run.runSeconds.value.toFixed(1)}s, reboots ${core.reboots.value}, rewrites ${core.rewrites.value}, ages ${core.ages.value}`,
+  );
+  next++;
+}
+
+// The opening turn, before any tick: the seat's first turn is inside the first tick.
+player.turn();
+// The beat reader goes before the seat, so it reads after the modules and before the turn.
+// 1-corps needs that: the player reboots in the turn its first Legacy comes pending.
+const unread = engine.tickDriver.onTick(saveBeat);
+const unseat = seatReferencePlayer(engine, player);
+try {
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: MAX_SIM,
+    until: () => next === BEATS.length,
+  });
+} finally {
+  unseat();
+  unread();
 }
 if (next < BEATS.length) throw new Error(`stopped before beat ${BEATS[next]!.file}`);
 engine.dispose();
