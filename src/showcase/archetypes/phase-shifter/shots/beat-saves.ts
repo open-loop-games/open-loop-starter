@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { Decimal } from '@open-loop/engine';
 import { createPhaseShifterEngine } from '../engine';
 import { getBoard, getBox, getNight } from '../modules';
-import { createReferencePlayer } from '../balance/_player';
+import { createReferencePlayer, seatPlayer } from '../balance/_player';
 
 const WALL_STEP = 0.5;
 const MAX_WALL = 3600;
@@ -23,7 +23,6 @@ engine.tickDriver.stop(); // the loop below drives the ticks
 const box = getBox();
 const board = getBoard();
 const night = getNight();
-const player = createReferencePlayer(WALL_STEP);
 
 /** In beat order: the file stem, and the moment it is saved at. */
 const BEATS: { file: string; at: () => boolean }[] = [
@@ -37,15 +36,22 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
-for (let wall = 0; wall < MAX_WALL && next < BEATS.length; wall += WALL_STEP) {
-  player.step();
-  engine.tickDriver.processInterval(WALL_STEP);
-  if (BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(`${file} at wall ${wall}s`);
-    next++;
+// The arc runner's path: a hand loop on `processInterval`, as `balance/_arc.ts` plays.
+const player = createReferencePlayer(WALL_STEP);
+player.step(); // the opening step, before the first tick
+const unseat = seatPlayer(engine, player);
+try {
+  for (let wall = 0; wall < MAX_WALL && next < BEATS.length; wall += WALL_STEP) {
+    engine.tickDriver.processInterval(WALL_STEP);
+    if (BEATS[next]!.at()) {
+      const { file } = BEATS[next]!;
+      writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+      console.log(`${file} at wall ${wall}s`);
+      next++;
+    }
   }
+} finally {
+  unseat();
 }
 if (next < BEATS.length) throw new Error(`stopped before beat ${BEATS[next]!.file}`);
 engine.dispose();

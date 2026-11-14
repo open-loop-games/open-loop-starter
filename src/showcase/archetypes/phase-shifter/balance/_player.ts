@@ -11,9 +11,10 @@
  *   insomnia once an alibi holds, then plans the night with `planWatches`;
  * - opens each door the moment its record holds, and reads the last page.
  *
- * The caller advances the engine after each step, through the TickDriver's
- * live path, `processInterval`, so insomnia's game speed applies.
+ * `seatPlayer` runs it on the engine's tick driver, one step per wall step, after the
+ * caller's opening step.
  */
+import type { Engine } from '@open-loop/engine';
 import { ANCHORS, bestCell, planWatches, type DoorId } from '../data';
 import { getBoard, getBox, getCase, getNight } from '../modules';
 
@@ -25,7 +26,7 @@ export interface PlayerStep {
   readLast: boolean;
 }
 
-/** Binds the player to the running engine's modules; call `step` once per wall step. */
+/** Binds the player to the running engine's modules; `step` takes one wall step's turn. */
 export function createReferencePlayer(wallStep: number): { step: () => PlayerStep } {
   const { life } = getCase();
   const box = getBox();
@@ -63,4 +64,31 @@ export function createReferencePlayer(wallStep: number): { step: () => PlayerSte
   }
 
   return { step };
+}
+
+/**
+ * Seats the reference player on the engine's tick driver: it takes one step every tick, after
+ * the modules' own tick handlers. The player paces a human in wall time, so its cadence is the
+ * caller's: drive one tick per wall step through `processInterval(wallStep)`, the live path, so
+ * insomnia's game speed applies. One interval stays one tick while `wallStep` times the game
+ * speed is at most the driver's `maxDeltaTime`; a longer one splits, and the player would step
+ * once per part.
+ *
+ * The seat's first step is inside the first tick. The caller takes the opening step before it,
+ * through `player.step`, so the turn at the end of tick N sits where a step before tick N+1 did.
+ *
+ * @param engine - the running engine whose modules the player works
+ * @param player - the player `createReferencePlayer` bound, which the caller's opening step shares
+ * @param onTurn - receives what each step did, for a probe to record
+ * @returns the function that unseats the player; call it when the run ends.
+ */
+export function seatPlayer(
+  engine: Engine,
+  player: { step: () => PlayerStep },
+  onTurn?: (step: PlayerStep) => void,
+): () => void {
+  return engine.tickDriver.onTick(() => {
+    const step = player.step();
+    onTurn?.(step);
+  });
 }
