@@ -62,6 +62,11 @@ export interface BootTestEngineOptions {
   tickMode?: EngineOptions['tickMode'];
   /** The dt of a fixed-mode tick, as the game's own boot passes it. */
   fixedDt?: EngineOptions['fixedDt'];
+  /**
+   * The longest dt one tick runs. `advanceTime` splits a longer dt into equal ticks under it,
+   * where `tickOnce` does not; raise it to step a balance-harness runner at a coarse dt.
+   */
+  maxDeltaTime?: EngineOptions['maxDeltaTime'];
 }
 
 /**
@@ -79,6 +84,7 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
     accessor,
     tickMode,
     fixedDt,
+    maxDeltaTime,
   } = options;
   const persistenceNamespace = `${persistenceNamespacePrefix}-${bootCounter++}`;
   seedRNG(seed);
@@ -93,6 +99,7 @@ export function bootTestEngine(options: BootTestEngineOptions): TestEngineHandle
     accessor,
     tickMode,
     fixedDt,
+    maxDeltaTime,
   });
   for (const mod of modules) engine.use(mod);
   // start() runs install/onStart wiring; stop() immediately hands the clock to

@@ -45,4 +45,24 @@ describe('bootTestEngine', () => {
     await tick(2);
     expect(seen).toEqual([0.12, 0.12]);
   });
+
+  // A probe that advances by a coarse dt through the balance harness wants one tick of it,
+  // the step `tickOnce` takes at `intervalRate = 1 / dt`.
+  it('advances a coarse dt as one tick when maxDeltaTime allows it', () => {
+    const seen: number[] = [];
+    const { engine } = bootTestEngine({
+      intervalRate: 0.5,
+      maxDeltaTime: 2,
+      modules: [
+        {
+          id: 'reads-dt',
+          install(ctx) {
+            ctx.onTick((dt) => seen.push(dt));
+          },
+        },
+      ],
+    });
+    engine.tickDriver.advanceTime(2);
+    expect(seen).toEqual([2]);
+  });
 });
