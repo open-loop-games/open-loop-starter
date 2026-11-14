@@ -63,9 +63,9 @@ under the reference sensei against the walk.
 | Ox-Hide Ren beaten | 12m05s | 12m35s |
 | First graduation | 30m00s | 31m49s |
 | Brother Gang parried | 41m18s | 37m30s |
-| Iron-Shell Ma beaten | 56m27s | 51m49s |
-| Master Lu beaten | 1h27m55s | 1h27m58s |
-| The Envoy's Gauntlet, the end beat | 2h02m21s | 2h02m22s |
+| Iron-Shell Ma beaten | 56m27s | 51m51s |
+| Master Lu beaten | 1h27m55s | 1h27m51s |
+| The Envoy's Gauntlet, the end beat | 2h02m21s | 2h02m25s |
 
 A challenger arrives every 10–15 minutes from Old Bao on; graduations come every 6–14
 minutes after the first. Play goes on past the Gauntlet, the beaten challengers returning

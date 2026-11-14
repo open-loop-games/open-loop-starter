@@ -10,11 +10,11 @@
  *   - Graduates once a run pays at least half the Insight ever earned (never less than
  *     two) and no challenger at the gate is unbeaten, then studies every scroll it can.
  *
- * The student's executor is the shipping automation; the sensei only writes for it. The
- * caller advances the engine between acts and calls `act` once a second of play.
+ * The student's executor is the shipping automation; the sensei only writes for it.
+ * `seatSensei` runs it on the engine's tick driver, once a second of play.
  */
 
-import { Decimal, type DecimalSource } from '@open-loop/engine';
+import { Decimal, createThrottle, type DecimalSource, type Engine } from '@open-loop/engine';
 import { getDojo, getGate, getGraduation, getKata, getLineage, type KataError } from '../modules';
 import {
   ANCHORS,
@@ -110,8 +110,8 @@ const ANSWER: Partial<Record<ChallengerId, TechniqueId>> = Object.fromEntries(
   CHALLENGERS.filter((c) => c.answer).map((c) => [c.id, c.answer as TechniqueId]),
 );
 
-/** Binds the sensei to the running engine's modules; call `act` once a second of play. */
-export function createReferenceSensei(): { act: () => SenseiAct } {
+/** Binds the sensei to the running engine's modules; `act` takes one turn. */
+function createReferenceSensei(): { act: () => SenseiAct } {
   const lineage = getLineage();
   const dojo = getDojo();
   const gate = getGate();
@@ -151,4 +151,29 @@ export function createReferenceSensei(): { act: () => SenseiAct } {
   }
 
   return { act };
+}
+
+/** Game seconds between the sensei's acts. */
+export const SENSEI_EVERY = 1;
+
+/**
+ * Seats the reference sensei on the engine's tick driver: it acts every `SENSEI_EVERY` game
+ * seconds. The cadence holds while no tick is longer than `SENSEI_EVERY`, whatever
+ * `tickDelta` the runner steps by, and a runner's `until` stays a read.
+ *
+ * The bout is a tick phase, and tick phases run after plain tick handlers. So a scroll the
+ * sensei inks reaches the bout in the same tick.
+ *
+ * @param engine - the running engine whose modules the sensei works
+ * @param onTurn - receives what each act did, for a probe to record
+ * @returns the function that unseats the sensei; call it when the run ends.
+ */
+export function seatSensei(engine: Engine, onTurn?: (act: SenseiAct) => void): () => void {
+  const sensei = createReferenceSensei();
+  const turn = createThrottle({ interval: SENSEI_EVERY });
+  return engine.tickDriver.onTick((dt) => {
+    if (!turn.ready(dt)) return;
+    const act = sensei.act();
+    onTurn?.(act);
+  });
 }

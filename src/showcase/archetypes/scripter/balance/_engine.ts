@@ -25,7 +25,7 @@ import {
   type LineageApi,
 } from '../modules';
 import { CHALLENGERS, TECHNIQUES, type ChallengerId, type TechniqueId } from '../data';
-import { createReferenceSensei } from './_sensei';
+import { seatSensei } from './_sensei';
 
 /** Sim seconds per runner step. */
 export const DT = 0.5;
@@ -111,10 +111,9 @@ export function runArc(seconds: number): ArcResult {
     ),
   );
 
-  const sensei = createReferenceSensei();
   let lastBout = gate.last.value;
   const known = new Set<TechniqueId>();
-  /** One step's work after its advance; true ends the run. */
+  /** Reads the state an advance left; true ends the run. */
   function step(): boolean {
     for (const id of lineage.arrived.value)
       if (out.arrivals[id] === undefined) {
@@ -139,9 +138,15 @@ export function runArc(seconds: number): ArcResult {
       }
     }
 
-    // The sensei, once a second.
-    if (Math.floor(t) === Math.floor(t - DT)) return false;
-    const act = sensei.act();
+    const ki = Decimal.fromValue(dojo.ki.value);
+    if (ki.isNan() || !Decimal.isFinite(ki)) {
+      out.anomalies.push(`${t}s bad Ki ${String(dojo.ki.value)}`);
+      return true;
+    }
+    return false;
+  }
+
+  const unseat = seatSensei(engine, (act) => {
     if (act.inked) {
       out.inks++;
       if (act.inked.length)
@@ -152,27 +157,23 @@ export function runArc(seconds: number): ArcResult {
       beat(`GRADUATION #${lineage.graduations.value}: +${act.graduated} Insight`);
       for (const s of act.studied) beat(`studied ${s}`);
     }
-    const ki = Decimal.fromValue(dojo.ki.value);
-    if (ki.isNan() || !Decimal.isFinite(ki)) {
-      out.anomalies.push(`${t}s bad Ki ${String(dojo.ki.value)}`);
-      return true;
-    }
-    return false;
-  }
-
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // sensei's step, which `'uniform'` mode runs before every advance.
-  runUntil({
-    engine,
-    tickDelta: DT,
-    maxSimTime: seconds,
-    until: ({ iteration, simTime }) => {
-      const done = iteration > 0 && step();
-      // A beat is stamped with the sim time its step began at, so `t` moves on after the work.
-      t = simTime;
-      return done;
-    },
   });
+  try {
+    runUntil({
+      engine,
+      tickDelta: DT,
+      maxSimTime: seconds,
+      until: ({ iteration, simTime }) => {
+        const done = iteration > 0 && step();
+        // A beat is stamped with the sim time its advance began at, so `t` moves on after the
+        // reads. Beats recorded inside a tick, the sensei's turns and tier unlocks, read the same `t`.
+        t = simTime;
+        return done;
+      },
+    });
+  } finally {
+    unseat();
+  }
   return out;
 }
 

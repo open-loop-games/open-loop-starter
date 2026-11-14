@@ -89,9 +89,9 @@ how to read it. The arc probe plays 2.5 hours in a few seconds of wall time.
 - **The middle arc runs up to three and a half minutes behind the walk on arrivals.** The walk buys
   greedily every second; the scroll buys one purchase per beat until Thousand Hands, and
   spends bout beats on it.
-- **Bouts in the arc run 15–20% over par for Iron-Shell Ma, the Twins and the Envoy.** Par
-  is measured on bout lines alone; the arc's scroll keeps its purchase lines, which spend
-  bout beats. Their bounties pay at that speed factor.
+- **Bouts in the arc run over par for Iron-Shell Ma and the Envoy (15–20%) and the Twins
+  (near 40%).** Par is measured on bout lines alone; the arc's scroll keeps its purchase
+  lines, which spend bout beats. Their bounties pay at that speed factor.
 - **Sister Wen and Master Lu are hard failures before their words.** Every earlier scroll
   loses to them, by design: chi runs out against Wen, and Lu answers every repeated form.
   The rest only earn less.
