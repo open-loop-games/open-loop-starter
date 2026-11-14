@@ -20,6 +20,7 @@
  *   the arc pays, which match by construction.
  */
 
+import { formatClock } from '@/composables/useFormatting';
 import {
   AGENCY,
   AGENCY_GROWTH,
@@ -47,9 +48,10 @@ import {
 } from '../data';
 
 const f = (x: number, d = 1) => x.toFixed(d);
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-console.log(`\nSURVIVOR projection: a ${clock(ANCHORS.takeSeconds)} take, a scene a minute\n`);
+console.log(
+  `\nSURVIVOR projection: a ${formatClock(ANCHORS.takeSeconds)} take, a scene a minute\n`,
+);
 
 console.log(
   `The schedule: ${BEATS.count} rewrites, gaps ×${f(BEATS.ratio, 3)} from ${ANCHORS.firstBeat}s to ${ANCHORS.lastInterval}s`,

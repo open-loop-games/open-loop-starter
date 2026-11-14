@@ -17,10 +17,12 @@
  *   second and reverses several times a second.
  */
 
+import { runUntil } from '@open-loop/engine';
 import { RATINGS, STARS, type StarDef } from '../data';
 import { REEL_ROUTE_WEIGHT, scoreHeadings, type HeadingScore } from '../modules/sim/steering';
 import { createSteerer } from '../modules/sim/steering';
-import { buildSet, openAll } from './_set';
+import { seedBatch } from '@/balance';
+import { MAX_TAKE_SECONDS, TICK, buildSet, openAll } from './_set';
 import { claimChunk, emitResult, runPool } from './_pool';
 
 interface Job {
@@ -56,42 +58,52 @@ function read(job: Job): Reading {
     spread: Object.fromEntries(TERMS.map((t) => [t, 0])) as Record<Term, number>,
     contactAll: 0,
   }));
-  let tick = 0;
   let turn = 0;
   let reversals = 0;
   let last = a.player.facing;
   const recent: number[] = [];
-  while (take.view.screen === 'take') {
-    if (tick % 10 === 0) {
-      const scores = scoreHeadings(a, take.mods(), instinct, steerer.nav, steerer.fields(a));
-      const b = bands[BANDS.findIndex((_, i) => a.extras.length < BANDS[i + 1]!)]!;
-      b.n++;
-      for (const t of TERMS) {
-        const v = (h: HeadingScore) =>
-          t === 'route'
-            ? h.route * REEL_ROUTE_WEIGHT * instinct.eta
-            : t === 'near'
-              ? h.near * instinct.eta
-              : h[t];
-        const vs = scores.map(v);
-        b.spread[t] += Math.max(...vs) - Math.min(...vs);
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // probe's step, which `'uniform'` mode runs before every advance.
+  const run = runUntil({
+    engine,
+    tickDelta: TICK,
+    maxSimTime: MAX_TAKE_SECONDS,
+    until: ({ iteration }) => {
+      if (iteration > 0) {
+        let d = a.player.facing - last;
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        turn += Math.abs(d);
+        last = a.player.facing;
+        recent.push(d);
+        if (recent.length > 15) recent.shift();
+        if (Math.abs(recent.reduce((x, y) => x + y, 0)) > (150 * Math.PI) / 180) {
+          reversals++;
+          recent.length = 0;
+        }
       }
-      if (scores.every((h) => h.contact)) b.contactAll++;
-    }
-    engine.tickDriver.tickOnce();
-    tick++;
-    let d = a.player.facing - last;
-    while (d > Math.PI) d -= 2 * Math.PI;
-    while (d < -Math.PI) d += 2 * Math.PI;
-    turn += Math.abs(d);
-    last = a.player.facing;
-    recent.push(d);
-    if (recent.length > 15) recent.shift();
-    if (Math.abs(recent.reduce((x, y) => x + y, 0)) > (150 * Math.PI) / 180) {
-      reversals++;
-      recent.length = 0;
-    }
-  }
+      if (take.view.screen !== 'take') return true;
+      if (iteration % 10 === 0) {
+        const scores = scoreHeadings(a, take.mods(), instinct, steerer.nav, steerer.fields(a));
+        const b = bands[BANDS.findIndex((_, i) => a.extras.length < BANDS[i + 1]!)]!;
+        b.n++;
+        for (const t of TERMS) {
+          const v = (h: HeadingScore) =>
+            t === 'route'
+              ? h.route * REEL_ROUTE_WEIGHT * instinct.eta
+              : t === 'near'
+                ? h.near * instinct.eta
+                : h[t];
+          const vs = scores.map(v);
+          b.spread[t] += Math.max(...vs) - Math.min(...vs);
+        }
+        if (scores.every((h) => h.contact)) b.contactAll++;
+      }
+      return false;
+    },
+  });
+  if (run.terminated !== 'predicate')
+    throw new Error(`a take ran past ${MAX_TAKE_SECONDS} s without ending`);
   const seconds = take.view.wrap!.seconds;
   set.dispose();
   return {
@@ -110,9 +122,7 @@ if (chunk) {
 } else {
   const seeds = Number(process.argv[2] ?? 4);
   const jobs = STARS.flatMap((s) =>
-    [0, 1].flatMap((rating) =>
-      Array.from({ length: seeds }, (_, i) => ({ star: s.id, rating, seed: i + 1 })),
-    ),
+    [0, 1].flatMap((rating) => seedBatch(seeds).map((seed) => ({ star: s.id, rating, seed }))),
   );
   const t0 = performance.now();
   const rs = await runPool<Job, Reading>(import.meta.url, jobs);

@@ -36,7 +36,9 @@ import {
   predictedBeatTime,
   type StarDef,
 } from '../data';
-import { buildSet, clock, equip, median, openAll, playTake, type TakeResult } from './_set';
+import { formatClock } from '@/composables/useFormatting';
+import { seedBatch, spreadOf } from '@/balance';
+import { buildSet, equip, openAll, playTake, type TakeResult } from './_set';
 import { claimChunk, emitResult, runPool } from './_pool';
 
 interface Job {
@@ -62,7 +64,7 @@ if (chunk) {
   const jobs: Job[] = [];
   for (const star of STARS)
     for (const rating of ratings)
-      for (let seed = 1; seed <= seeds; seed++) jobs.push({ star: star.id, rating, seed, bare });
+      for (const seed of seedBatch(seeds)) jobs.push({ star: star.id, rating, seed, bare });
   const t0 = performance.now();
   const results = await runPool<Job, TakeResult>(import.meta.url, jobs);
 
@@ -87,31 +89,35 @@ if (chunk) {
           1,
           rs.reduce((a, r) => a + r.kills, 0),
         );
+      // A take a column does not apply to reads NaN, which the spread drops.
+      const over = spreadOf(rs, {
+        fall: (r) => (r.end === 'cut' ? r.seconds - ANCHORS.takeSeconds : NaN),
+        left: (r) => r.leadLeft ?? NaN,
+        marks: (r) => r.marksFilled,
+        end: (r) => r.seconds,
+        level: (r) => r.level,
+        contact: (r) => r.contactSeconds,
+        peak: (r) => r.peakExtras,
+      });
       console.log(
         [
           star.id.padEnd(10),
           RATINGS[rating]!.label.padEnd(7),
           `${cut}/${rs.length}`.padEnd(5),
-          (cut
-            ? `${median(rs.filter((r) => r.end === 'cut').map((r) => r.seconds - ANCHORS.takeSeconds)).toFixed(0)}s`
-            : '–'
-          ).padEnd(5),
+          (over.fall ? `${over.fall.median.toFixed(0)}s` : '–').padEnd(5),
           String(rs.filter((r) => r.leadLeft !== null).length).padEnd(5),
-          (() => {
-            const left = rs.map((r) => r.leadLeft).filter((x): x is number => x !== null);
-            return left.length ? `${(median(left) * 100).toFixed(0)}%` : '–';
-          })().padEnd(5),
-          (rs.reduce((a, r) => a + r.marksFilled, 0) / rs.length).toFixed(1).padEnd(6),
+          (over.left ? `${(over.left.median * 100).toFixed(0)}%` : '–').padEnd(5),
+          over.marks!.avg.toFixed(1).padEnd(6),
           `${rs.reduce((a, r) => a + r.jackpots, 0)}/${rs.reduce((a, r) => a + r.rivals, 0)}`.padEnd(
             9,
           ),
-          clock(median(rs.map((r) => r.seconds))).padEnd(11),
-          String(median(rs.map((r) => r.level))).padEnd(6),
+          formatClock(over.end!.median).padEnd(11),
+          String(over.level!.median).padEnd(6),
           eta.toFixed(2).padEnd(5),
           income.toFixed(2).padEnd(7),
-          `${median(rs.map((r) => r.contactSeconds)).toFixed(0)}s`.padEnd(8),
+          `${over.contact!.median.toFixed(0)}s`.padEnd(8),
           `${(shot * 100).toFixed(0)}%`.padEnd(8),
-          String(Math.max(...rs.map((r) => r.peakExtras))).padEnd(5),
+          String(over.peak!.max).padEnd(5),
           String(rs.reduce((a, r) => a + r.turnedAway, 0)),
         ].join(' '),
       );
@@ -122,10 +128,11 @@ if (chunk) {
     console.log('\nThe ladder on G: median rewrite time against the spine (s)');
     for (const star of STARS) {
       const rs = results.filter((r) => r.star === star.id && r.rating === 0);
-      const row = BEATS.times.map((_, i) => {
-        const ts = rs.map((r) => r.rewrites[i]).filter((t): t is number => t !== undefined);
-        return ts.length ? median(ts).toFixed(0) : '–';
-      });
+      const fired = spreadOf(
+        rs,
+        Object.fromEntries(BEATS.times.map((_, i) => [i, (r: TakeResult) => r.rewrites[i] ?? NaN])),
+      );
+      const row = BEATS.times.map((_, i) => fired[i]?.median.toFixed(0) ?? '–');
       console.log(`  ${star.id.padEnd(9)} ${row.map((v) => v.padStart(4)).join('')}`);
     }
     const pred = BEATS.times.map((_, i) => predictedBeatTime(i + 1).toFixed(0));
@@ -135,6 +142,6 @@ if (chunk) {
     );
   }
   console.log(
-    `\n${jobs.length} takes of up to ${clock(ANCHORS.takeSeconds)} in ${((performance.now() - t0) / 1000).toFixed(1)} s`,
+    `\n${jobs.length} takes of up to ${formatClock(ANCHORS.takeSeconds)} in ${((performance.now() - t0) / 1000).toFixed(1)} s`,
   );
 }

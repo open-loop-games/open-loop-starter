@@ -14,9 +14,13 @@ import { join } from 'node:path';
 import { seedRNG } from '@open-loop/engine';
 import { createSurvivorEngine } from '../engine';
 import { SurvivorTuningRegistryKey, getMeta, getTake } from '../modules';
-import { callSheet, clock, playTake, shop, type Set } from '../balance/_set';
+import { formatClock } from '@/composables/useFormatting';
+import { callSheet, playTake, shop, type Set } from '../balance/_set';
 
-/** The career probe's seed 1, whose firsts `IDENTITY.md` § The arc records. */
+/**
+ * The committed shots' saves and PNGs are played from seed 1, and `IDENTITY.md` § The arc
+ * records that run.
+ */
 const SEED = 1;
 const MAX_TAKES = 18;
 
@@ -51,7 +55,7 @@ for (let n = 0; n < MAX_TAKES && next < BEATS.length; n++) {
   if (BEATS[next]!.at()) {
     const { file } = BEATS[next]!;
     writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(`${file} after take ${n + 1}, session ${clock(session)}`);
+    console.log(`${file} after take ${n + 1}, session ${formatClock(session)}`);
     next++;
   }
 }

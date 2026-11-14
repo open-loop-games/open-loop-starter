@@ -11,6 +11,7 @@
 
 import {
   addResource,
+  runUntil,
   seedRNG,
   toNumber,
   type Engine,
@@ -86,6 +87,14 @@ export function equip(set: Set, levels: Partial<Record<string, number>>): void {
   }
 }
 
+/**
+ * One live tick. The probe engine runs in variable mode, where an advance of `1 / INTERVAL_RATE`
+ * is the tick the shipping engine's fixed mode runs.
+ */
+export const TICK = 1 / INTERVAL_RATE;
+/** Sim seconds past which a take that has not ended is a stall. */
+export const MAX_TAKE_SECONDS = 3600;
+
 /** What one take did, for a probe to print. */
 export interface TakeResult {
   star: StarDef['id'];
@@ -126,11 +135,20 @@ export function playTake(
   take.startTake({ ...options, driver: options.driver ?? 'instinct' });
   const rewrites: number[] = [];
   let level = toNumber(take.rewrites.level.value);
-  while (take.view.screen === 'take') {
-    engine.tickDriver.tickOnce();
-    const now = toNumber(take.rewrites.level.value);
-    for (; level < now; level++) rewrites.push(take.arena()?.t ?? 0);
-  }
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // probe's step, which `'uniform'` mode runs before every advance.
+  const run = runUntil({
+    engine,
+    tickDelta: TICK,
+    maxSimTime: MAX_TAKE_SECONDS,
+    until: () => {
+      const now = toNumber(take.rewrites.level.value);
+      for (; level < now; level++) rewrites.push(take.arena()?.t ?? 0);
+      return take.view.screen !== 'take';
+    },
+  });
+  if (run.terminated !== 'predicate')
+    throw new Error(`a take ran past ${MAX_TAKE_SECONDS} s without ending`);
   const w = take.view.wrap!;
   const a = take.arena()!;
   const result: TakeResult = {
@@ -194,16 +212,4 @@ export function callSheet(set: Set): { rating: number; stars: StarDef['id'][] } 
     rating: open[open.length - 1]!.def.index,
     stars: STARS.filter((s) => set.meta.stars.getPurchasable(s.id)?.active.value).map((s) => s.id),
   };
-}
-
-/** m:ss */
-export function clock(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  return `${m}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
-}
-
-export function median(xs: number[]): number {
-  if (xs.length === 0) return NaN;
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.floor((s.length - 1) / 2)]!;
 }

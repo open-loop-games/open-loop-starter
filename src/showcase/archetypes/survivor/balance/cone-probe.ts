@@ -16,10 +16,12 @@
  * every armed tick; `at fire` is the same at the instants the gag fired.
  */
 
+import { runUntil } from '@open-loop/engine';
 import { RIG_BY_ID, STARS, type StarDef } from '../data';
 import { CONNECT_HORIZON } from '../modules/sim/steering';
 import { inCone } from '../modules/sim/arena';
-import { buildSet, openAll } from './_set';
+import { seedBatch } from '@/balance';
+import { MAX_TAKE_SECONDS, TICK, buildSet, openAll } from './_set';
 import { claimChunk, emitResult, runPool } from './_pool';
 
 interface Job {
@@ -59,30 +61,45 @@ function read(job: Job): Reading {
     bestAtFire: 0,
   };
   let lastCd = 0;
-  while (take.view.screen === 'take') {
-    const slot = a.rigs.find((r) => r.def.id === GAG.id)!;
-    const p = a.player;
-    const sample = slot.cd <= CONNECT_HORIZON;
-    let caught = 0;
-    let best = 0;
-    if (sample) {
-      caught = inCone(a.extras, p, p.facing, GAG.reach).length;
-      for (let i = 0; i < FACINGS; i++)
-        best = Math.max(best, inCone(a.extras, p, (i / FACINGS) * Math.PI * 2, GAG.reach).length);
-      if (best > 0) {
-        out.armed++;
-        out.caught += caught;
-        out.best += best;
+  // The gag's slot and the cone read before an advance, for the fire check after it.
+  let slot = a.rigs.find((r) => r.def.id === GAG.id)!;
+  let caught = 0;
+  let best = 0;
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // probe's step, which `'uniform'` mode runs before every advance.
+  const run = runUntil({
+    engine,
+    tickDelta: TICK,
+    maxSimTime: MAX_TAKE_SECONDS,
+    until: ({ iteration }) => {
+      if (iteration > 0) {
+        if (slot.cd > lastCd + 0.5 && best > 0) {
+          out.fires++;
+          out.caughtAtFire += caught;
+          out.bestAtFire += best;
+        }
+        lastCd = slot.cd;
       }
-    }
-    engine.tickDriver.tickOnce();
-    if (slot.cd > lastCd + 0.5 && best > 0) {
-      out.fires++;
-      out.caughtAtFire += caught;
-      out.bestAtFire += best;
-    }
-    lastCd = slot.cd;
-  }
+      if (take.view.screen !== 'take') return true;
+      slot = a.rigs.find((r) => r.def.id === GAG.id)!;
+      const p = a.player;
+      caught = 0;
+      best = 0;
+      if (slot.cd <= CONNECT_HORIZON) {
+        caught = inCone(a.extras, p, p.facing, GAG.reach).length;
+        for (let i = 0; i < FACINGS; i++)
+          best = Math.max(best, inCone(a.extras, p, (i / FACINGS) * Math.PI * 2, GAG.reach).length);
+        if (best > 0) {
+          out.armed++;
+          out.caught += caught;
+          out.best += best;
+        }
+      }
+      return false;
+    },
+  });
+  if (run.terminated !== 'predicate')
+    throw new Error(`a take ran past ${MAX_TAKE_SECONDS} s without ending`);
   set.dispose();
   return out;
 }
@@ -92,9 +109,7 @@ if (chunk) {
   for (const job of chunk) emitResult(read(job));
 } else {
   const seeds = Number(process.argv[2] ?? 4);
-  const jobs = STARS.flatMap((s) =>
-    Array.from({ length: seeds }, (_, i) => ({ star: s.id, seed: i + 1 })),
-  );
+  const jobs = STARS.flatMap((s) => seedBatch(seeds).map((seed) => ({ star: s.id, seed })));
   const t0 = performance.now();
   const rs = await runPool<Job, Reading>(import.meta.url, jobs);
   console.log(`\nSURVIVOR cone probe: ${seeds} seeds a star, the Pyro Gag at level 4, G\n`);

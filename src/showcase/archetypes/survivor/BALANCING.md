@@ -69,8 +69,8 @@ prices and steps; the stars' instincts.
   is held.
 - **`MAX_EXTRAS` is a frame-rate guard.** At G and PG it turns nothing away. At PG-13 and
   R the set pieces and crowd calls push the floor to it just before the climax, and it turns
-  away a few percent of a take's arrivals there. A lower guard caps the hp flux and decides
-  takes.
+  arrivals away there, most of them in the Wirework Ace's takes. A lower guard caps the hp
+  flux and decides takes.
 - **The movement score is decided by spread.** Each weight in `modules/sim/steering.ts` is
   sized against the others in score units; a term that reads the same on every candidate
   steers nothing. Contact is costed over remaining health, so the same crowd is cheap at full
@@ -107,22 +107,29 @@ it.
 ## Known thin
 
 - **The career's pace is set by the leads, not the model.** The model banks three takes a
-  rating and six at R; the reference career clears G and PG in about two takes each,
-  holds at PG-13 for the ledger's second star, and wraps the picture in two or three R
-  takes. The arc lands near two hours, but by a different shape than the model's.
+  rating and six at R; the reference career clears G and PG in a median of two takes each,
+  holds at PG-13 for five, waiting on the ledger's second star, and wraps the picture a
+  median half hour after R opens. The arc lands near two hours, but by a different shape
+  than the model's.
 - **The leads' share is assumed.** `leadShare` is not measured per star; the Veteran fells
-  leads in under a minute where it reaches them, the Wirework Ace in two.
-- **The Pyro and the Wirework Ace die before the climax.** At their opening agency they fall
-  short of seven minutes in about half their takes at G and PG; the Pyro's cone stays at
-  level 1 under the heading-bound discount. They fell every lead they reach.
+  a lead a median of 59–76 s past the climax, the Wirework Ace 142–166 s.
+- **The Pyro and the Wirework Ace often fall before the climax, and fell few leads.** At
+  their opening agency the Pyro reaches the climax in 3 of 8 takes at G and 6 at PG, the
+  Wirework Ace in 6 and 5. The Pyro's cone stays at level 1 under the heading-bound
+  discount. Of the leads they reach at G each fells one; the Wirework Ace fells two leads
+  in the 32 takes of its four ratings, and leaves a median 39–75% of the lead's hp standing.
+- **The guard turns many arrivals away from the Wirework Ace at PG-13.** The take probe's
+  `away` reads 1886 over its eight PG-13 takes and 403 over its eight R takes, against 29
+  and 68 for the Veteran and none for the Pyro. Whether the guard decides those takes is
+  not measured.
 - **The career probe is the slow one.** A career is sequential, so its wall time is one
   career's: about 30 s for eighteen takes, most of it the late crowd's shoulder pass and
   the steering score.
-- **The cone catches little.** The stars land 8% of the best cone while it is armed, and 16%
+- **The cone catches little.** The stars land 5% of the best cone while it is armed, and 11%
   at the instant it fires: the gag fires on the first body to enter it, so it fires early on
   one.
 - **The threat term decides alone on a crowded floor.** Past 50 bodies its spread is
-  550–2400 against 10–40 for every other term, and most samples expect contact on every
+  470–4800 against 4–150 for every other term, and most samples expect contact on every
   candidate.
 - **The star never stands still** for the Dolly Rifle's bonus, and never plays the shot;
   it works a chalk mark only by holding the crowd inside it.

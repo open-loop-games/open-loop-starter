@@ -86,7 +86,7 @@ rewrites against the ladder;
 | The picture wraps: the Big Bad falls | 2:01:11 |
 
 A take runs seven minutes to the climax and up to three more. Over eight seeds R opens at a
-median of 1:30:44 and the picture wraps at 1:54:36, as the agency is bought out; the set
+median of 1:24:01 and the picture wraps at 1:57:13, as the agency is bought out; the set
 stays open after.
 
 <!-- eject:strip-start -->

@@ -1,17 +1,18 @@
 /**
- * The manifest's beat recording: the career probe's first seeded career under the stars'
- * instincts (the star improvising, the reference agent shopping between takes), read for
- * each beat's fire time in session seconds. `pnpm beats survivor` plays it beside the
+ * The manifest's beat recording: one seeded career, as the career probe plays it, under the
+ * stars' instincts (the star improvising, the reference agent shopping between takes), read
+ * for each beat's fire time in session seconds. `pnpm beats survivor` plays it beside the
  * recorded windows.
  *
- * One career is the measurement: seed 1, as the probe's seed 1, for the 18 takes that
- * carry it past the wrap. A take is live, so a second seed costs another minute and adds a
- * different career, not a spread of the same beats.
+ * One career is the measurement: seed 1, for the 18 takes that carry it past the wrap. The
+ * committed shots' saves and PNGs are played from seed 1 (`shots/beat-saves.ts`), and
+ * `IDENTITY.md` § The arc records that run. A take is live, so a second seed costs another
+ * minute and adds a different career, not a spread of the same beats.
  */
 import { RATINGS } from '../data';
 import { playCareer } from './_career';
 
-/** The runs one recording spans: the probe's seed 1, 18 takes. */
+/** The runs one recording spans: seed 1, 18 takes. */
 export const runs = [{ seed: 1, takes: 18 }];
 
 /** Plays one run; each manifest beat's fire time in session seconds, by beat number. */
