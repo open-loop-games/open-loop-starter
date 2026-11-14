@@ -8,17 +8,20 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Decimal } from '@open-loop/engine';
+import { Decimal, runUntil } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
 import { createLooperEngine } from '../engine';
 import { getMeta, getNight } from '../modules';
 import { DT } from '../balance/_engine';
-import { createReferencePlayer } from '../balance/_player';
+import { createReferencePlayer, seatPlayer } from '../balance/_player';
 
 const MAX_SIM = 3600;
 
 const { engine } = createLooperEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+// runUntil below drives the ticks. Its `advanceTime` applies no game speed. The player never
+// picks a faster rung, so the game speed stays 1, and the live loop plays the same game.
+engine.tickDriver.stop();
 
 const meta = getMeta();
 const night = getNight();
@@ -45,27 +48,36 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
+/** Nights done before the latest advance; a rise after it is a night that ended. */
+let before = night.cycle.count.value;
 player.begin();
-for (let sim = 0; sim < MAX_SIM && next < BEATS.length; sim += DT) {
-  const before = night.cycle.count.value;
-  engine.tickDriver.processInterval(DT);
-  if (night.cycle.count.value > before) {
-    laundryAt = rideAt = -1;
-    player.buy();
-    player.replan();
-  }
-  if (night.nightActive.value) {
-    if (laundryAt < 0 && night.depth.value >= 2) laundryAt = into();
-    if (rideAt < 0 && night.actions.getState('ride')!.done.value > 0) rideAt = into();
-  }
-  if (BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(
-      `${file} at sim ${sim.toFixed(1)}s: night ${night.cycle.count.value + 1} at ${into().toFixed(1)}s, ${new Decimal(night.nerve.value).toFixed(1)} Nerve left`,
-    );
-    next++;
-  }
+const unseat = seatPlayer(engine);
+try {
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: MAX_SIM,
+    until: ({ iteration, simTime }) => {
+      if (iteration === 0) return false;
+      if (night.cycle.count.value > before) laundryAt = rideAt = -1;
+      before = night.cycle.count.value;
+      if (night.nightActive.value) {
+        if (laundryAt < 0 && night.depth.value >= 2) laundryAt = into();
+        if (rideAt < 0 && night.actions.getState('ride')!.done.value > 0) rideAt = into();
+      }
+      if (BEATS[next]!.at()) {
+        const { file } = BEATS[next]!;
+        writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+        console.log(
+          `${file} at ${formatClock(simTime)} of play: night ${night.cycle.count.value + 1} at ${into().toFixed(1)}s, ${new Decimal(night.nerve.value).toFixed(1)} Nerve left`,
+        );
+        next++;
+      }
+      return next === BEATS.length;
+    },
+  });
+} finally {
+  unseat();
 }
 if (next < BEATS.length) throw new Error(`stopped before beat ${BEATS[next]!.file}`);
 engine.dispose();

@@ -5,9 +5,10 @@
  * The player works only what a player works by hand: it writes the plan
  * between nights, presses Begin until Routine takes over, and buys notes
  * cheapest-first, the spine's assumed buying rule. Routine and Discipline run
- * as the shipping `modules/automation.ts` once bought.
+ * as the shipping `modules/automation.ts` once bought. The caller begins the
+ * first night; `seatPlayer` works each dusk after it on the engine's tick driver.
  */
-import { Decimal } from '@open-loop/engine';
+import { Decimal, createThrottle, type Engine } from '@open-loop/engine';
 import { NOTES, ZONES, referencePlan } from '../data';
 import { getAutomation, getMeta, getNight, type PlanRow } from '../modules';
 
@@ -70,4 +71,32 @@ export function createReferencePlayer(): ReferencePlayer {
       if (!automation.hasReached('routine')) night.beginNight();
     },
   };
+}
+
+/** Game seconds between the player's turns: every tick of the probe's 0.1 s step. */
+export const PLAYER_EVERY = 0.1;
+
+/**
+ * Seats the reference player on the engine's tick driver. Every `PLAYER_EVERY` game
+ * seconds it looks for a night that ended since its last turn, then buys and replans.
+ * The night ends in a module's own tick handler, which runs before the seat's. So the
+ * player works the dusk in the tick the night ended in, and a runner's `until` stays a read.
+ *
+ * @param engine - the running engine whose modules the player works
+ * @param onTurn - receives the note ids each dusk bought, for a probe to record
+ * @returns the function that unseats the player; call it when the run ends.
+ */
+export function seatPlayer(engine: Engine, onTurn?: (bought: string[]) => void): () => void {
+  const player = createReferencePlayer();
+  const night = getNight();
+  const turn = createThrottle({ interval: PLAYER_EVERY });
+  let nightsDone = night.cycle.count.value;
+  return engine.tickDriver.onTick((dt) => {
+    if (!turn.ready(dt)) return;
+    if (night.cycle.count.value === nightsDone) return;
+    nightsDone = night.cycle.count.value;
+    const bought = player.buy();
+    player.replan();
+    onTurn?.(bought);
+  });
 }
