@@ -4,6 +4,7 @@
  * and prints the distribution of beats. Prints; never asserts.
  *
  * Run: `pnpm exec vite-node src/showcase/archetypes/scripter/balance/bout-probe.ts [seeds]`
+ * `seeds` is how many bouts a row fights (default 300), drawn with `seedBatch`.
  *
  * How to read it: `with` is the reference template once the challenger's answer is
  * known, whose median `PAR` in `../data/spine.ts` records (for the Envoy, the dispatcher);
@@ -11,13 +12,15 @@
  * what the new word pays. `dispatch` is the scroll the Envoy's Names allow, against
  * everyone: it should never lose, and should sit near each challenger's own template.
  * Bouts are fought at the reference Temper (`REFERENCE_TEMPER`), which only Ren reads.
+ * Each cell is the win share, then the beats a win took: median [fewest–most].
  */
 
+import { formatSpread, seedBatch, spreadOf } from '@/balance';
 import { CHALLENGERS, PAR, TECHNIQUES, type TechniqueId } from '../data';
 import { fightBouts } from './_engine';
 import { boutLines, referenceScroll } from './_sensei';
 
-const SEEDS = Number(process.argv[2] ?? 300);
+const SEEDS = seedBatch(Number(process.argv[2] ?? 300));
 const knowsAll = () => true;
 /** Every word but the ones learned at or after the challenger's answer. */
 function knowsBefore(answer: string | null): (t: TechniqueId) => boolean {
@@ -25,14 +28,15 @@ function knowsBefore(answer: string | null): (t: TechniqueId) => boolean {
   const cut = answer ? order.indexOf(answer as TechniqueId) : order.length;
   return (t) => ['reading', 'lineage', 'thousand-hands'].includes(t) || order.indexOf(t) < cut;
 }
+/** Win share, then the beats a win took: median [fewest–most]. A loss counts as Infinity. */
 const stats = (xs: number[]) => {
-  const won = xs.filter(Number.isFinite).sort((a, b) => a - b);
-  const pct = Math.round((100 * won.length) / xs.length);
-  if (!won.length) return `win ${String(pct).padStart(3)}%`.padEnd(30);
-  return `win ${String(pct).padStart(3)}%  median ${String(won[Math.floor(won.length / 2)]).padStart(3)}  p90 ${String(won[Math.floor(won.length * 0.9)]).padStart(3)}`;
+  const pct = Math.round((100 * xs.filter(Number.isFinite).length) / xs.length);
+  const won = spreadOf(xs, { beats: (x) => x }).beats;
+  if (!won) return `win ${String(pct).padStart(3)}%`.padEnd(30);
+  return `win ${String(pct).padStart(3)}%  beats ${formatSpread(won, (n) => String(n).padStart(3))}`;
 };
 
-console.log(`\nSCRIPTER bout probe — ${SEEDS} seeded bouts per row\n`);
+console.log(`\nSCRIPTER bout probe — ${SEEDS.length} seeded bouts per row\n`);
 console.log(
   'challenger'.padEnd(30) +
     'with its word'.padEnd(36) +

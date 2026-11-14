@@ -77,7 +77,7 @@ Every key is read at its reader site through `tunable()`; the registry is in
 
 | Question | Probe | What it prints |
 |---|---|---|
-| What does each challenger's word pay? | `bout-probe.ts [seeds]` | per challenger: wins and median beats with its word, before it, and under the dispatcher, beside `PAR` |
+| What does each challenger's word pay? | `bout-probe.ts [seeds]` | per challenger: wins, and a win's beats as median [fewest–most], with its word, before it, and under the dispatcher, beside `PAR` |
 | Does the shipping game follow the walk? | `arc-probe.ts [seconds] [--beats]` | arrivals and first wins, graduations, bouts per challenger against par, the end state |
 
 Run them from the repo root with
@@ -97,5 +97,9 @@ how to read it. The arc probe plays 2.5 hours in a few seconds of wall time.
   The rest only earn less.
 - **The rotation is uniform over the beaten.** Late in the arc the Straw Post still comes,
   for a bounty of eight beats. It is a breather, not a test.
+- **The Envoy's par sits above the default batch's median.** `PAR` records 74 beats,
+  measured over seeds 1–300. Over the bout probe's default batch the dispatcher's median is
+  72 [57–94]. Every other challenger's median is its par on both batches. Moving the par
+  moves the Envoy's bounty, so re-measuring it is a balance pass.
 - **The dispatcher is one scroll.** `PAR` for the Envoy is the reference dispatcher's; a
   better one beats it and is paid up to twice the bounty.

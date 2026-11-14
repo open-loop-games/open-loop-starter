@@ -7,7 +7,7 @@
  * and reads magnitudes.
  */
 
-import { Decimal, type DecimalSource, type Engine } from '@open-loop/engine';
+import { Decimal, runUntil, type DecimalSource, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -114,9 +114,8 @@ export function runArc(seconds: number): ArcResult {
   const sensei = createReferenceSensei();
   let lastBout = gate.last.value;
   const known = new Set<TechniqueId>();
-  for (; t < seconds; t += DT) {
-    engine.tickDriver.advanceTime(DT);
-
+  /** One step's work after its advance; true ends the run. */
+  function step(): boolean {
     for (const id of lineage.arrived.value)
       if (out.arrivals[id] === undefined) {
         out.arrivals[id] = t;
@@ -141,7 +140,7 @@ export function runArc(seconds: number): ArcResult {
     }
 
     // The sensei, once a second.
-    if (Math.floor(t) === Math.floor(t - DT)) continue;
+    if (Math.floor(t) === Math.floor(t - DT)) return false;
     const act = sensei.act();
     if (act.inked) {
       out.inks++;
@@ -156,9 +155,24 @@ export function runArc(seconds: number): ArcResult {
     const ki = Decimal.fromValue(dojo.ki.value);
     if (ki.isNan() || !Decimal.isFinite(ki)) {
       out.anomalies.push(`${t}s bad Ki ${String(dojo.ki.value)}`);
-      break;
+      return true;
     }
+    return false;
   }
+
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // sensei's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: seconds,
+    until: ({ iteration, simTime }) => {
+      const done = iteration > 0 && step();
+      // A beat is stamped with the sim time its step began at, so `t` moves on after the work.
+      t = simTime;
+      return done;
+    },
+  });
   return out;
 }
 
@@ -173,13 +187,13 @@ export const REFERENCE_TEMPER = 4;
  *
  * @param id - the challenger
  * @param scroll - the scroll text
- * @param seeds - how many bouts, seeded 1…n
+ * @param seeds - one bout per seed
  * @param temper - the student's Temper (the fist is 1 + Temper)
  */
 export function fightBouts(
   id: ChallengerId,
   scroll: string,
-  seeds: number,
+  seeds: readonly number[],
   temper = REFERENCE_TEMPER,
 ): number[] {
   const g = buildGame();
@@ -195,12 +209,16 @@ export function fightBouts(
   if (errors.length)
     throw new Error(`scroll does not parse: ${errors.map((e) => e.message).join('; ')}`);
   const results: number[] = [];
-  for (let seed = 1; seed <= seeds; seed++) {
+  for (const seed of seeds) {
     kata.ink(scroll);
     gate.next.value = null;
     gate.bout.value = openBout(id, seed);
-    let guard = 0;
-    while (gate.bout.value && guard++ < 1000) engine.tickDriver.advanceTime(kata.beatSeconds.value);
+    runUntil({
+      engine,
+      tickDelta: kata.beatSeconds.value,
+      maxSimTime: 1000 * kata.beatSeconds.value,
+      until: () => !gate.bout.value,
+    });
     const last = gate.last.value!;
     results.push(last.won ? last.beats : Infinity);
   }

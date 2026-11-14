@@ -185,7 +185,8 @@ export const RULES = {
 
 /**
  * Median beats per bout under the reference template for each challenger (for the Envoy,
- * the dispatcher). Measured: `balance/bout-probe.ts 300`, at `REFERENCE_TEMPER`.
+ * the dispatcher). Measured with `fightBouts` over seeds 1–300, at `REFERENCE_TEMPER`; the bout
+ * probe's `seedBatch(300)` reads the Envoy two beats lower (`BALANCING.md` § Known thin).
  */
 export const PAR: Readonly<Record<ChallengerId, number>> = {
   post: 8,

@@ -15,16 +15,14 @@
  * - § end state: the final dojo.
  */
 
+import { formatClock } from '@/composables/useFormatting';
 import { CHALLENGERS, PAR, WALK, type ChallengerId } from '../data';
 import { num, runArc } from './_engine';
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const SECONDS = Number(args[0] ?? 9000);
 const LIST = process.argv.includes('--beats');
-const clock = (s: number | undefined) =>
-  s === undefined
-    ? '—'
-    : `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const clock = (s: number | undefined) => (s === undefined ? '—' : formatClock(s));
 const fmt = (x: number) => (Math.abs(x) >= 1e4 ? x.toExponential(2) : x.toFixed(x < 10 ? 2 : 0));
 
 const started = Date.now();
