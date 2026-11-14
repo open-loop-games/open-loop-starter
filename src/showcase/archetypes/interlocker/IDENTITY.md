@@ -88,10 +88,10 @@ winter larder and the boilers are the player's, and the probe's runner provision
 | The first aeroplane | 544–546s |
 | The first Exposition | 797–824s |
 | The first Ministry order delivered | 903–1056s |
-| Every charter held | 1836–1922s |
-| Le Contremaître employed | 2246–2340s |
-| The tenth Exposition | 4500–4576s |
-| The Grand Prix (up to 7000s) | 6167–6957s |
+| Every charter held | 1834–1920s |
+| Le Contremaître employed | 2244–2338s |
+| The tenth Exposition | 4499–4576s |
+| The Grand Prix (up to 7000s) | 6160–6956s |
 
 Ranges are the arc probe at tick sizes 0.25 s to 2 s.
 

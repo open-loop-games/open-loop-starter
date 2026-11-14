@@ -12,23 +12,23 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { toNumber } from '@open-loop/engine';
+import { runUntil, toNumber } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
 import { createInterlockerEngine } from '../engine';
 import { getAutomation, getEmpire, getExposition, getMinistry, getWorks } from '../modules';
-import { DT, createForeman } from '../balance/_foreman';
+import { DT, seatForeman } from '../balance/_foreman';
 
 const MAX_SIM = 3600;
 
 const { engine } = createInterlockerEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 
 const works = getWorks();
 const empire = getEmpire();
 const expo = getExposition();
 const ministry = getMinistry();
 const tiers = getAutomation().tiers;
-const foreman = createForeman();
 const planes = () => toNumber(works.res.aeroplanes.value as unknown as number);
 
 /** In beat order: the file stem, and the moment it is saved at. */
@@ -48,19 +48,26 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
-for (let sim = 0; sim < MAX_SIM && next < BEATS.length;) {
-  engine.tickDriver.processInterval(DT);
-  sim += DT;
-  if (Math.round(sim * 2) % 2 === 0) foreman.tend();
-  if (foreman.ready()) foreman.stage();
-  if (BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    tiers.resetUnlocks();
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    tiers.unlock('academie');
-    console.log(`${file} at sim ${sim}s`);
-    next++;
-  }
+const unseat = seatForeman(engine);
+try {
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: MAX_SIM,
+    until: ({ iteration, simTime }) => {
+      if (iteration > 0 && BEATS[next]!.at()) {
+        const { file } = BEATS[next]!;
+        tiers.resetUnlocks();
+        writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+        tiers.unlock('academie');
+        console.log(`${file} at ${formatClock(simTime)} of play`);
+        next++;
+      }
+      return next === BEATS.length;
+    },
+  });
+} finally {
+  unseat();
 }
 if (next < BEATS.length) throw new Error(`stopped before beat ${BEATS[next]!.file}`);
 engine.dispose();
