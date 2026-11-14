@@ -23,6 +23,8 @@
  * seconds, the probe's dt plays a different game from live play.
  */
 
+import { spreadOf } from '@/balance';
+import { formatClock } from '@/composables/useFormatting';
 import { ANCHORS, PREDICTION, REWRITE_THRESHOLD, TIERS, ageGate } from '../data';
 import { num, runArc, DT } from './_engine';
 
@@ -32,12 +34,8 @@ const LIST = process.argv.includes('--beats');
 const DT_ARG = process.argv.find((a) => a.startsWith('--dt='));
 const STEP = DT_ARG ? Number(DT_ARG.slice('--dt='.length)) : DT;
 const fmt = (x: number) => (Math.abs(x) >= 1e4 ? x.toExponential(2) : x.toFixed(x < 10 ? 2 : 0));
-const clock = (s: number | undefined) =>
-  s === undefined
-    ? '—'
-    : `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-const median = (xs: number[]) =>
-  xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : NaN;
+const clock = (s: number | undefined) => (s === undefined ? '—' : formatClock(s));
+const median = (xs: number[]) => spreadOf(xs, { v: (x) => x }).v?.median ?? NaN;
 
 const started = Date.now();
 const arc = runArc(SECONDS, STEP);

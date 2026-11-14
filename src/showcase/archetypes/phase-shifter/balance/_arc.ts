@@ -64,6 +64,10 @@ export function runArc(onStep?: (state: ArcState) => void) {
 
   const player = createReferencePlayer(WALL_STEP);
   let terminated = 'maxWall';
+  // A hand loop on purpose: insomnia is game speed, which only `processInterval` applies.
+  // `runUntil` advances by `advanceTime`, which ignores `speedMultiplier`, so the arc past
+  // insomnia would run at 1×. `replayLive` applies it, but sets `speedMultiplier` itself and
+  // restores it on exit, over the game's own write; and it has no predicate to stop on.
   while (wall < MAX_WALL) {
     const { opened, readLast } = player.step();
     for (const door of opened) beat(`door: ${door}`, true);

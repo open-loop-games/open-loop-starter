@@ -7,7 +7,7 @@
  * records beats and reads magnitudes.
  */
 
-import { Decimal, type DecimalSource, type Engine } from '@open-loop/engine';
+import { Decimal, runUntil, type DecimalSource, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -136,17 +136,17 @@ export function runArc(seconds: number, dt = DT): ArcResult {
     legacy.upgrade('dispatch').active.value &&
     automation.dispatchOn.value;
 
-  while (t() < seconds) {
-    const rebootsBefore = core.reboots.value;
-    const rewritesBefore = core.rewrites.value;
-    const agesBefore = core.ages.value;
-    const continuityBefore = num(continuity.continuity.cumulative!.value);
-    const canonBefore = num(canon.canon.cumulative!.value);
-    player.turn();
-    const corpsBefore = corps();
-    const resetsBefore = resets();
-    const deskRan = deskOn();
-    handle.engine.tickDriver.advanceTime(dt);
+  let rebootsBefore = 0;
+  let rewritesBefore = 0;
+  let agesBefore = 0;
+  let continuityBefore = 0;
+  let canonBefore = 0;
+  let corpsBefore = 0;
+  let resetsBefore = 0;
+  let deskRan = false;
+
+  /** Reads what the last advance did; true when the run must stop on an anomaly. */
+  function readStep(): boolean {
     // A reset in the tick wipes the corps, so its recruits cannot be read off.
     if (deskRan && resets() === resetsBefore) {
       desk.ticks++;
@@ -202,13 +202,38 @@ export function runArc(seconds: number, dt = DT): ArcResult {
     const rate = num(run.totalRate.value);
     if (!Number.isFinite(justice) || Number.isNaN(rate)) {
       anomalies.push(`t=${t().toFixed(0)} non-finite justice/rate: ${justice} / ${rate}`);
-      break;
+      return true;
     }
     if (t() - lastRebootAt > 1800) {
       anomalies.push(`t=${t().toFixed(0)} no Reboot for 30 min`);
       lastRebootAt = t();
     }
+    return false;
   }
+
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // player's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: handle.engine,
+    tickDelta: dt,
+    // The run ends on the game's own play clock; this cap only bounds the loop.
+    maxSimTime: seconds + dt,
+    until: ({ iteration }) => {
+      // Iteration 0 is the cold start: no advance yet, so nothing to read off.
+      if (iteration > 0 && readStep()) return true;
+      if (t() >= seconds) return true;
+      rebootsBefore = core.reboots.value;
+      rewritesBefore = core.rewrites.value;
+      agesBefore = core.ages.value;
+      continuityBefore = num(continuity.continuity.cumulative!.value);
+      canonBefore = num(canon.canon.cumulative!.value);
+      player.turn();
+      corpsBefore = corps();
+      resetsBefore = resets();
+      deskRan = deskOn();
+      return false;
+    },
+  });
 
   return {
     beats,

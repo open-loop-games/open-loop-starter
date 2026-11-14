@@ -88,3 +88,10 @@ Every key is read at its reader site through `tunable()`; the registry is in
   did not hint.
 - **The board's hint value is uneven.** A 3×3 board and a 4×4 board make nearly the same
   night; only the 5×5 shortens it sharply.
+- **The arc runner is a hand loop, not `runUntil`.** Insomnia sets the TickDriver's
+  `speedMultiplier`, and only the live path, `processInterval`, applies it. `runUntil`
+  steps by `advanceTime`, which ignores it. On `runUntil` every night after insomnia would
+  play at 1×, so the probe's wall column would no longer show what insomnia buys. `replayLive` takes the live path,
+  but holds its own game speed for the replay and cannot stop on a closed case. So
+  `balance/_arc.ts` keeps its loop, and its sim-seconds are summed from the speed each
+  step ran at.

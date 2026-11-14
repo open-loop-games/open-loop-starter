@@ -16,6 +16,7 @@
  */
 import { toNumber } from '@open-loop/engine';
 import { runUntil } from '@open-loop/engine/harness';
+import { spreadOf } from '@/balance';
 import { CONTRACTS, PLAYER_PERSONA } from '../data/contracts';
 import { EFFECTIVENESS, UNIT_KINDS, effectiveness, type UnitKind } from '../data/units';
 import type { Side } from '../modules/side';
@@ -101,7 +102,8 @@ console.log(
 console.log(
   'seat            won    median end   counter fit   per contract (won of 3, median end)',
 );
-const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+/** The median match end over a batch of runs. */
+const medianEnd = (rs: { end: number }[]) => spreadOf(rs, { end: (r) => r.end }).end!.median;
 for (const [name, flat, counter] of seats) {
   setTable(flat);
   PLAYER_PERSONA.counter = counter;
@@ -109,14 +111,14 @@ for (const [name, flat, counter] of seats) {
     SPREAD.map((s) => ({ c, ...play(c, (HARD ? 1 : INCOME[c]!) * s) })),
   );
   const won = runs.filter((r) => r.phase === 'won').length;
-  const fit = Math.exp(runs.reduce((n, r) => n + r.fit, 0) / runs.length);
+  const fit = Math.exp(spreadOf(runs, { fit: (r) => r.fit }).fit!.avg);
   const per = CONTRACTS.map((_, c) => {
     const rs = runs.filter((r) => r.c === c);
     const stall = rs.some((r) => r.phase === 'live') ? ' stall' : '';
-    return `c${c + 1} ${rs.filter((r) => r.phase === 'won').length}/3 ${median(rs.map((r) => r.end)).toFixed(0)}s${stall}`;
+    return `c${c + 1} ${rs.filter((r) => r.phase === 'won').length}/3 ${medianEnd(rs).toFixed(0)}s${stall}`;
   }).join('  ');
   console.log(
-    `${name.padEnd(15)} ${String(won).padStart(2)}/${runs.length}   ${median(runs.map((r) => r.end))
+    `${name.padEnd(15)} ${String(won).padStart(2)}/${runs.length}   ${medianEnd(runs)
       .toFixed(0)
       .padStart(6)} s    ${fit.toFixed(3).padStart(8)}      ${per}`,
   );
