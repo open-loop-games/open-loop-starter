@@ -8,22 +8,23 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { runUntil } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
 import { CARRIERS } from '../data';
 import { createPackerEngine } from '../engine';
 import { getFleet, getLine, getYard } from '../modules';
-import { DT, createReferenceFitter } from '../balance/_fitter';
+import { DT, seatFitter } from '../balance/_fitter';
 
 const MAX_SIM = 4 * 3600;
 const BREACH_MOTHER = CARRIERS.findIndex((c) => c.id === 'carrier:breach-mother') + 1;
 
 const { engine } = createPackerEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 
 const yard = getYard();
 const fleet = getFleet();
 const line = getLine();
-const fitter = createReferenceFitter();
 
 /** In beat order: the file stem, and the moment it is saved at. */
 const BEATS: { file: string; at: () => boolean }[] = [
@@ -34,16 +35,25 @@ const BEATS: { file: string; at: () => boolean }[] = [
 
 const dir = import.meta.dirname;
 let next = 0;
-for (let sim = DT; sim <= MAX_SIM && next < BEATS.length; sim += DT) {
-  engine.tickDriver.processInterval(DT);
-  fitter.step();
-  // An engagement is not saved, so a beat waits until none is running.
-  if (!line.engagement.value && BEATS[next]!.at()) {
-    const { file } = BEATS[next]!;
-    writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(`${file} at sim ${sim}s`);
-    next++;
-  }
+const unseat = seatFitter(engine);
+try {
+  runUntil({
+    engine,
+    tickDelta: DT,
+    maxSimTime: MAX_SIM,
+    until: ({ iteration, simTime }) => {
+      // An engagement is not saved, so a beat waits until none is running.
+      if (iteration > 0 && !line.engagement.value && BEATS[next]!.at()) {
+        const { file } = BEATS[next]!;
+        writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
+        console.log(`${file} at ${formatClock(simTime)} of play`);
+        next++;
+      }
+      return next === BEATS.length;
+    },
+  });
+} finally {
+  unseat();
 }
 if (next < BEATS.length) throw new Error(`stopped before beat ${BEATS[next]!.file}`);
 engine.dispose();

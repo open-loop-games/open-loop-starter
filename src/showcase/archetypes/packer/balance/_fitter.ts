@@ -1,11 +1,11 @@
 /**
  * Shared probe fixture — not runnable on its own.
  *
- * Plays the arc under a greedy fitter. `createReferenceFitter` decides against whichever
- * engine is live; `runArc` boots a real packer engine and records the arc. The fitter is
+ * Plays the arc under a greedy fitter. `seatFitter` seats it on the live engine's tick
+ * driver; `runArc` boots a real packer engine and records the arc. The fitter is
  * balance-harness tooling, not a mechanic: Hardpoint ships no automation. It stands in for
  * the spine's reference player, so its rules are the spine's assumptions:
- * - every tick it buys each hull section and refit it can afford, and recommissions as
+ * - every turn it buys each hull section and refit it can afford, and recommissions as
  *   soon as the next ship can be commissioned;
  * - it fits for salvage while saving, and for firepower once the sector's carrier can be
  *   engaged. In the fight it engages as soon as a window's fire covers the hull; if no
@@ -28,7 +28,14 @@
  * tick-by-tick behavioral specs; this plays an arc and records magnitudes.
  */
 
-import { Decimal, runUntil, toNumber, type Purchasable } from '@open-loop/engine';
+import {
+  Decimal,
+  createThrottle,
+  runUntil,
+  toNumber,
+  type Engine,
+  type Purchasable,
+} from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -60,6 +67,8 @@ import {
 
 /** Sim-seconds per tick. */
 export const DT = 1;
+/** Game seconds between the fitter's turns, by default: one turn per runner step. */
+export const FITTER_EVERY = DT;
 
 /** Shortest payback horizon a swap is judged against; longer while saving for structure. */
 const MIN_PAYBACK_S = 60;
@@ -122,8 +131,8 @@ export interface FitterHooks {
   onCommissioned?: () => void;
 }
 
-export interface ReferenceFitter {
-  /** The fitter's decisions for one tick; call it after each tick the caller advances. */
+interface ReferenceFitter {
+  /** The fitter's decisions for one turn. */
   step: () => void;
   counts: ArcRecord['counts'];
   /** what the last fitting pass scored for */
@@ -133,8 +142,8 @@ export interface ReferenceFitter {
 const num = (v: unknown) => toNumber(Decimal.fromValue(v as never));
 const price = (p: Purchasable) => num(p.getCost(1));
 
-/** Binds the fitter to the running engine's modules. */
-export function createReferenceFitter(hooks: FitterHooks = {}): ReferenceFitter {
+/** Binds the fitter to the running engine's modules; `step` takes one turn. */
+function createReferenceFitter(hooks: FitterHooks = {}): ReferenceFitter {
   const yard = getYard();
   const board = getBoard();
   const fleet = getFleet();
@@ -534,6 +543,44 @@ export function createReferenceFitter(hooks: FitterHooks = {}): ReferenceFitter 
   return { step, counts, objective: () => objective };
 }
 
+/** What a seated fitter reports after each turn, for a probe to record. */
+export interface FitterTurn {
+  /** the fitter's running tallies */
+  counts: ArcRecord['counts'];
+  /** what the last fitting pass scored for */
+  objective: Objective;
+}
+
+export interface SeatFitterOptions extends FitterHooks {
+  /** game seconds between turns; set it to the runner's `tickDelta` */
+  every?: number;
+  /** receives each turn's tallies and objective */
+  onTurn?: (turn: FitterTurn) => void;
+}
+
+/**
+ * Seats the reference fitter on the engine's tick driver: it takes a turn every `every` game
+ * seconds. The cadence holds while no tick is longer than `every`, whatever `tickDelta` the
+ * runner steps by, and a runner's `until` stays a read.
+ *
+ * Packer's modules register no tick phase, so the turn runs after every module's handler of
+ * its tick: where a step between two ticks would.
+ *
+ * @param engine - the running engine whose modules the fitter works
+ * @param options - the cadence, the recommission hooks, and `onTurn`
+ * @returns the function that unseats the fitter; call it when the run ends.
+ */
+export function seatFitter(engine: Engine, options: SeatFitterOptions = {}): () => void {
+  const { every = FITTER_EVERY, onTurn, ...hooks } = options;
+  const fitter = createReferenceFitter(hooks);
+  const turn = createThrottle({ interval: every });
+  return engine.tickDriver.onTick((dt) => {
+    if (!turn.ready(dt)) return;
+    fitter.step();
+    onTurn?.({ counts: fitter.counts, objective: fitter.objective() });
+  });
+}
+
 /** Play the arc under the fitter until the Dreadnought falls, or `maxSimSeconds`. */
 export function runArc(options: ArcOptions = {}): ArcRecord {
   const { dt = DT, maxSimSeconds = 4 * 3600, trace = false } = options;
@@ -548,14 +595,24 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
   const line = getLine();
 
   // ── beats ──
-  let sim = 0;
+  // A beat is stamped with the sim time its advance ended at: `until` sets `t` before its
+  // reads. A beat met inside a tick, the fitter's commission, waits in `pending` until the
+  // read of the same advance logs it with that stamp.
+  let t = 0;
   const beats: BeatRecord[] = [];
+  const pending: Omit<BeatRecord, 't'>[] = [];
   const seen = new Set<string>();
-  const mark = (id: string, t: number) => {
-    if (seen.has(id)) return;
-    seen.add(id);
-    beats.push({ id, t, income: board.salvageRate.value, firepower: board.firepower.value });
+  const meet = (id: string): Omit<BeatRecord, 't'> => ({
+    id,
+    income: board.salvageRate.value,
+    firepower: board.firepower.value,
+  });
+  const log = (b: Omit<BeatRecord, 't'>) => {
+    if (seen.has(b.id)) return;
+    seen.add(b.id);
+    beats.push({ ...b, t });
   };
+  const mark = (id: string) => log(meet(id));
   const lines: string[] = [];
   const boards: ArcRecord['boards'] = [];
   const snapshot = () => {
@@ -572,58 +629,87 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     for (const p of board.placed.value) fitted[p.type] = (fitted[p.type] ?? 0) + 1;
     boards.push({ ship: fleet.ship.value, rows, fitted });
   };
-  const fitter = createReferenceFitter({
-    onRelieved: snapshot,
-    onCommissioned: () => mark(`${fleet.ship.value}:commissioned`, sim),
-  });
-  const { counts } = fitter;
+  let turn: FitterTurn = {
+    counts: {
+      passes: 0,
+      steers: 0,
+      claimed: 0,
+      fits: 0,
+      swaps: 0,
+      trades: 0,
+      engagements: 0,
+      withdrawals: 0,
+      calibrations: 0,
+    },
+    objective: 'salvage',
+  };
 
   let ended: ArcRecord['ended'] = 'time';
   let anomaly: string | undefined;
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // fitter's step, which `'uniform'` mode runs before every advance.
-  runUntil({
-    engine: handle.engine,
-    tickDelta: dt,
-    maxSimTime: maxSimSeconds,
-    until: ({ iteration, simTime }) => {
-      // Iteration 0 is the cold start; the fitter first steps after the first tick.
-      if (iteration === 0) return false;
-      sim = simTime;
-      const t = sim;
-      const e = line.engagement.value;
-      fitter.step();
-      const s = num(yard.salvage.value);
-      if (!Number.isFinite(s) || !Number.isFinite(board.salvageRate.value)) {
-        anomaly = `non-finite at t=${t}: salvage=${s} rate=${board.salvageRate.value}`;
-        ended = 'anomaly';
-        return true;
-      }
-      if (num(yard.fabricator.totalCount.value) >= 1) mark(`${fleet.ship.value}:first purchase`, t);
-      for (const p of PIECES) if (p.unlock && yard.unlocked(p.id)) mark(p.unlock, t);
-      for (const { def, purchasable } of yard.hull.getAll())
-        if (purchasable.active.value) mark(def.id, t);
-      for (const { def, purchasable } of yard.refits.getAll())
-        if (purchasable.active.value) mark(def.id.replace(':', ':refit:'), t);
-      if (fleet.authoredFallen.value > 0) {
-        // A fallen authored carrier is marked by id, in breach-line order.
-        for (let i = 0; i < fleet.authoredFallen.value; i++) mark(CARRIERS[i]!.id, t);
-      }
-      if (trace && t % 60 === 0) {
-        lines.push(
-          `t=${t} ${fleet.ship.value} salvage=${s.toExponential(2)} rate=${board.salvageRate.value.toExponential(2)} fp=${board.firepower.value.toExponential(2)} cells=${board.placed.value.length}/${board.openCells.value} obj=${fitter.objective()} ${fleet.conditions.value.join('+') || 'calm'}${e ? ` ENGAGED ${e.remaining.toExponential(2)}` : ''}`,
-        );
-      }
-      if (fleet.storyEnded.value) {
-        snapshot();
-        ended = 'story';
-        return true;
-      }
-      return false;
-    },
+  /** Reads the state an advance left; true ends the run. */
+  function read(): boolean {
+    for (const b of pending.splice(0)) log(b);
+    const e = line.engagement.value;
+    const s = num(yard.salvage.value);
+    if (!Number.isFinite(s) || !Number.isFinite(board.salvageRate.value)) {
+      anomaly = `non-finite at t=${t}: salvage=${s} rate=${board.salvageRate.value}`;
+      ended = 'anomaly';
+      return true;
+    }
+    if (num(yard.fabricator.totalCount.value) >= 1) mark(`${fleet.ship.value}:first purchase`);
+    for (const p of PIECES) if (p.unlock && yard.unlocked(p.id)) mark(p.unlock);
+    for (const { def, purchasable } of yard.hull.getAll())
+      if (purchasable.active.value) mark(def.id);
+    for (const { def, purchasable } of yard.refits.getAll())
+      if (purchasable.active.value) mark(def.id.replace(':', ':refit:'));
+    if (fleet.authoredFallen.value > 0) {
+      // A fallen authored carrier is marked by id, in breach-line order.
+      for (let i = 0; i < fleet.authoredFallen.value; i++) mark(CARRIERS[i]!.id);
+    }
+    if (trace && t % 60 === 0) {
+      lines.push(
+        `t=${t} ${fleet.ship.value} salvage=${s.toExponential(2)} rate=${board.salvageRate.value.toExponential(2)} fp=${board.firepower.value.toExponential(2)} cells=${board.placed.value.length}/${board.openCells.value} obj=${turn.objective} ${fleet.conditions.value.join('+') || 'calm'}${e ? ` ENGAGED ${e.remaining.toExponential(2)}` : ''}`,
+      );
+    }
+    if (fleet.storyEnded.value) {
+      snapshot();
+      ended = 'story';
+      return true;
+    }
+    return false;
+  }
+
+  const unseat = seatFitter(handle.engine, {
+    every: dt,
+    onRelieved: snapshot,
+    onCommissioned: () => pending.push(meet(`${fleet.ship.value}:commissioned`)),
+    onTurn: (next) => (turn = next),
   });
+  let endedAt: number;
+  try {
+    endedAt = runUntil({
+      engine: handle.engine,
+      tickDelta: dt,
+      maxSimTime: maxSimSeconds,
+      until: ({ iteration, simTime }) => {
+        // Iteration 0 is the cold start; the fitter first takes a turn in the first tick.
+        t = simTime;
+        return iteration > 0 && read();
+      },
+    }).elapsedSimulated;
+  } finally {
+    unseat();
+  }
   if (ended === 'time') snapshot();
-  const record: ArcRecord = { beats, endedAt: sim, ended, anomaly, counts, boards, trace: lines };
+  const record: ArcRecord = {
+    beats,
+    endedAt,
+    ended,
+    anomaly,
+    counts: turn.counts,
+    boards,
+    trace: lines,
+  };
   handle.dispose();
   return record;
 }
