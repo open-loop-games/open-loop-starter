@@ -16,6 +16,7 @@
  * ±15% of the predicted span: the spine no longer predicts the plot.
  */
 import { Decimal, runUntil, type Engine } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -68,11 +69,8 @@ const num = (v: unknown) => new Decimal(v as never).toNumber();
 let clock = 0; // sim seconds across the whole arc, up to the start of the current plot
 let current: PlotRun | null = null;
 const beats: string[] = [];
-const beat = (msg: string) => beats.push(`${fmtTime(clock + (current?.elapsed ?? 0))}  ${msg}`);
-function fmtTime(s: number) {
-  const m = Math.floor(s / 60);
-  return `${String(m).padStart(3, ' ')}m${String(Math.floor(s % 60)).padStart(2, '0')}s`;
-}
+const beat = (msg: string) =>
+  beats.push(`${formatClock(clock + (current?.elapsed ?? 0)).padStart(5)}  ${msg}`);
 
 let firstPurchase = false;
 let bought: Record<string, number> = {};

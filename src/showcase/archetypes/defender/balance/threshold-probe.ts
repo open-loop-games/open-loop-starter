@@ -83,6 +83,8 @@ function play(p: number, x: number, only?: PestKind): Outcome {
   });
   tendPlot(garden, plot, run, { callEarly: true, refuse });
   const seen = new Set<number>();
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // probe's step, which `'uniform'` mode runs before every advance.
   runUntil({
     engine,
     until: () => {
