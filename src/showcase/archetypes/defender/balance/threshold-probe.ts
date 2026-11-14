@@ -25,7 +25,7 @@
  * The response is monotone for this gardener in practice, not by proof; a
  * bracket that does not close is printed as such.
  */
-import { runUntil } from '@open-loop/engine';
+import { runUntil, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -37,7 +37,13 @@ import {
   type PestKind,
   type PlantId,
 } from '../data';
-import { DefenderTuningRegistryKey, createDefenderModules, getGarden, getPlot } from '../modules';
+import {
+  DefenderTuningRegistryKey,
+  createDefenderModules,
+  getGarden,
+  getPlot,
+  type PlotRun,
+} from '../modules';
 import { tendPlot } from './_gardener';
 
 const STEPS = 8;
@@ -49,6 +55,27 @@ interface Outcome {
   leaks: number;
   held: boolean;
   kinds: Set<PestKind>;
+}
+
+/**
+ * Seats the shrinker on the engine's tick driver: every tick, after the plot's own step, it
+ * shrinks each pest of a kind other than `only` to a tenth of its HP, once, in the tick the
+ * pest arrives in. It acts every tick, so it needs no throttle.
+ *
+ * @param engine - the running engine whose plot module steps `run`
+ * @param run - the plot in progress
+ * @param only - the kind left at full size
+ * @returns the function that unseats the shrinker; call it when the run ends.
+ */
+function seatShrinker(engine: Engine, run: PlotRun, only: PestKind): () => void {
+  const seen = new Set<number>();
+  return engine.tickDriver.onTick(() => {
+    for (const u of run.pests) {
+      if (seen.has(u.id)) continue;
+      seen.add(u.id);
+      if (u.kind !== only) u.hp = u.maxHp = Math.max(1, u.maxHp * 0.1);
+    }
+  });
 }
 
 /**
@@ -82,24 +109,17 @@ function play(p: number, x: number, only?: PestKind): Outcome {
     if (e.type === 'leak') kinds.add(e.kind);
   });
   tendPlot(garden, plot, run, { callEarly: true, refuse });
-  const seen = new Set<number>();
-  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
-  // probe's step, which `'uniform'` mode runs before every advance.
-  runUntil({
-    engine,
-    until: () => {
-      if (only) {
-        for (const u of run.pests) {
-          if (seen.has(u.id)) continue;
-          seen.add(u.id);
-          if (u.kind !== only) u.hp = u.maxHp = Math.max(1, u.maxHp * 0.1);
-        }
-      }
-      return run.phase === 'won' || run.phase === 'lost';
-    },
-    maxSimTime: 3600,
-    tickDelta: 0.05,
-  });
+  const unseat = only ? seatShrinker(engine, run, only) : undefined;
+  try {
+    runUntil({
+      engine,
+      until: () => run.phase === 'won' || run.phase === 'lost',
+      maxSimTime: 3600,
+      tickDelta: 0.05,
+    });
+  } finally {
+    unseat?.();
+  }
   const leaks = run.waveLogs.reduce((s, l) => s + l.leaks, 0);
   const held = run.phase === 'won';
   handle.dispose();

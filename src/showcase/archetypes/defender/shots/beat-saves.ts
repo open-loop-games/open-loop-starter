@@ -15,6 +15,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { runUntil } from '@open-loop/engine';
 import { PLOTS, type PlantId } from '../data';
 import { createDefenderEngine } from '../engine';
 import { getGarden, getPlot } from '../modules';
@@ -23,10 +24,12 @@ import { spendNotes, tendPlot } from '../balance/_gardener';
 /** The arc probe's tick, so the gardener plays the run it records. */
 const TICK = 0.05;
 const MAX_ATTEMPTS = 3;
+/** The arc probe's cap on one plot's sim-seconds. */
+const MAX_SECONDS = 3600;
 
 const { engine } = createDefenderEngine({ persistenceNamespace: 'beat-saves' });
 engine.start();
-engine.tickDriver.stop(); // the loop below drives the ticks
+engine.tickDriver.stop(); // runUntil below drives the ticks
 
 const garden = getGarden();
 const plot = getPlot();
@@ -94,10 +97,15 @@ for (const [pi, def] of PLOTS.entries()) {
       console.log(`  eval: ${replayEval(def.id, board)}`);
       if (pi === PLOTS.length - 1) break; // the last beat is saved and its board read
     }
-    while (run.phase !== 'won' && run.phase !== 'lost') {
-      engine.tickDriver.processInterval(TICK);
-      clock += TICK;
-    }
+    const res = runUntil({
+      engine,
+      until: () => run.phase === 'won' || run.phase === 'lost',
+      maxSimTime: MAX_SECONDS,
+      tickDelta: TICK,
+    });
+    clock += res.elapsedSimulated;
+    if (res.terminated !== 'predicate')
+      throw new Error(`${def.displayName} stalled in phase ${run.phase} at wave ${run.wave}`);
     console.log(
       `  ${def.displayName} ${run.phase === 'won' ? 'held' : 'lost'} at sim ${clock.toFixed(1)}s`,
     );
