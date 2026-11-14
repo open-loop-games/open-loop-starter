@@ -20,7 +20,11 @@
 import { Decimal, selectionCheapest, type Producer } from '@open-loop/engine';
 import { ACTIVE_DEAL_RATE, LADDER, projectArc } from '../data';
 import type { AutomationModuleOptions } from '../modules';
-import { fmt, runArc } from './_engine';
+import { formatClock } from '@/composables/useFormatting';
+import { runArc } from './_engine';
+
+/** `formatClock`, with an em dash for never. */
+const clock = (s: number): string => (Number.isFinite(s) ? formatClock(s) : '—');
 
 const HORIZON = Number(process.argv[2] ?? 30) * 60;
 
@@ -38,15 +42,15 @@ const variants: { name: string; automation?: AutomationModuleOptions; dealRate?:
 ];
 
 const projection = projectArc(LADDER, HORIZON);
-console.log(`Producer: allocation probe (${fmt(HORIZON)})\n`);
+console.log(`Producer: allocation probe (${clock(HORIZON)})\n`);
 console.log(
   `${'variant'.padEnd(11)} ${'income /s'.padStart(10)}  ${'vs proj'.padStart(7)}  ${'top tier'.padStart(8)}  memos  counts`,
 );
 console.log(
-  `${'projection'.padEnd(11)} ${projection.finalRate.toExponential(2).padStart(10)}  ${''.padStart(7)}  ${fmt(projection.tierOpen.at(-1)!).padStart(8)}         ${projection.counts.join(' ')}`,
+  `${'projection'.padEnd(11)} ${projection.finalRate.toExponential(2).padStart(10)}  ${''.padStart(7)}  ${clock(projection.tierOpen.at(-1)!).padStart(8)}         ${projection.counts.join(' ')}`,
 );
 for (const v of variants) {
-  const run = await runArc({
+  const run = runArc({
     seconds: HORIZON,
     automation: v.automation,
     dealRate: v.dealRate,
@@ -59,7 +63,7 @@ for (const v of variants) {
     .getAll()
     .map((e) => Decimal.fromValue(e.producer.ownedCount.value).toNumber());
   console.log(
-    `${v.name.padEnd(11)} ${income.toExponential(2).padStart(10)}  ${`${((100 * income) / projection.finalRate).toFixed(0)}%`.padStart(7)}  ${fmt(top?.t ?? Infinity).padStart(8)}  ${String(firm.management.purchasedCount.value).padStart(2)}/${firm.management.size}  ${counts.join(' ')}`,
+    `${v.name.padEnd(11)} ${income.toExponential(2).padStart(10)}  ${`${((100 * income) / projection.finalRate).toFixed(0)}%`.padStart(7)}  ${clock(top?.t ?? Infinity).padStart(8)}  ${String(firm.management.purchasedCount.value).padStart(2)}/${firm.management.size}  ${counts.join(' ')}`,
   );
   run.dispose();
 }

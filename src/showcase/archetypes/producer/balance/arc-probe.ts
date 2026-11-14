@@ -27,20 +27,24 @@ import {
   LADDER,
   projectArc,
 } from '../data';
-import { fmt, runArc, type Beat } from './_engine';
+import { formatClock } from '@/composables/useFormatting';
+import { runArc, type Beat } from './_engine';
+
+/** `formatClock`, with an em dash for never. */
+const clock = (s: number): string => (Number.isFinite(s) ? formatClock(s) : '—');
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const HORIZON = Number(args[0] ?? (ENDING_TARGET * 1.1) / 60) * 60;
 const SEED = Number(args[1] ?? 1);
 const LIST = process.argv.includes('--beats');
 
-const run = await runArc({ seconds: HORIZON, seed: SEED });
+const run = runArc({ seconds: HORIZON, seed: SEED });
 const { beats, firm, automation, tips, standing } = run;
 const projection = projectArc(LADDER, HORIZON, { endingCost: ENDING_COST });
 
 console.log(`── spine (seed ${SEED}) ──`);
 console.log(
-  `m ${COST_RATIO.toFixed(4)} (doubles every ${DOUBLING_PURCHASES.toFixed(2)} buys) · cost step ×${CLASS_COST_STEP.toFixed(3)} solved for the ending at ${fmt(ENDING_TARGET)} · ending $${ENDING_COST.toExponential(3)}`,
+  `m ${COST_RATIO.toFixed(4)} (doubles every ${DOUBLING_PURCHASES.toFixed(2)} buys) · cost step ×${CLASS_COST_STEP.toFixed(3)} solved for the ending at ${clock(ENDING_TARGET)} · ending $${ENDING_COST.toExponential(3)}`,
 );
 
 // ── landmarks ──
@@ -68,7 +72,7 @@ const rows: [string, number, number][] = [
 for (const [label, t, p] of rows.sort((a, b) => a[1] - b[1])) {
   const drift =
     Number.isFinite(t) && Number.isFinite(p) ? `${(100 * (t / p - 1)).toFixed(1)}%` : '';
-  console.log(`${fmt(t).padStart(9)}  ${fmt(p).padStart(9)}  ${drift.padStart(7)}  ${label}`);
+  console.log(`${clock(t).padStart(9)}  ${clock(p).padStart(9)}  ${drift.padStart(7)}  ${label}`);
 }
 
 // ── hours ──
@@ -97,13 +101,13 @@ for (let h = 0; h * 3600 < end; h++) {
   const span = Math.min(end, (h + 1) * 3600) - h * 3600;
   const mix = [...channels].map(([ch, s]) => `${ch} ${((100 * s) / span).toFixed(0)}%`).join(' · ');
   console.log(
-    `  hour ${h + 1}: ${String(econ.length).padStart(4)} beats · longest ${fmt(longest).padStart(7)} · ${mix}`,
+    `  hour ${h + 1}: ${String(econ.length).padStart(4)} beats · longest ${clock(longest).padStart(7)} · ${mix}`,
   );
 }
 
 if (LIST) {
   console.log('\n── economic beats ──');
-  for (const b of economic) console.log(`${fmt(b.t).padStart(9)}  ${b.label}`);
+  for (const b of economic) console.log(`${clock(b.t).padStart(9)}  ${b.label}`);
 }
 
 // ── end state ──

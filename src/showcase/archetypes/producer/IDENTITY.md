@@ -69,12 +69,12 @@ it against the projection; `allocation-probe.ts` swaps the desk's rule.
 
 ## The arc
 
-| Beat | Projected | Recorded (seeds 1–3) |
+| Beat | Projected | Recorded (a three-seed batch) |
 |---|---|---|
 | Sales desk hired | 2m19s | 2m31s |
-| The top tier: first savings bank | 10m43s | 12m10s – 12m47s |
-| The building offered | 3h44m | 3h37m – 3h45m |
-| The building bought | 3h57m | 3h49m – 3h59m |
+| The top tier: first savings bank | 10m43s | 12m42s – 12m47s |
+| The building offered | 3h44m | 3h35m – 3h42m |
+| The building bought | 3h57m | 3h49m – 3h54m |
 
 The projection's times are its expected arc.
 

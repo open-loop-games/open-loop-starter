@@ -8,7 +8,7 @@
  * records beats and reads magnitudes.
  */
 
-import { Decimal, type Engine } from '@open-loop/engine';
+import { Decimal, runUntil, type Engine } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import {
   AutomationKey,
@@ -73,7 +73,7 @@ export interface ArcResult {
 }
 
 /** Play one arc. The caller reads the end state off the returned APIs, then disposes. */
-export async function runArc(options: ArcOptions): Promise<ArcResult> {
+export function runArc(options: ArcOptions): ArcResult {
   const { seconds, seed = 1 } = options;
   const handle = bootTestEngine({
     modules: createProducerModules({ automation: options.automation }),
@@ -105,67 +105,79 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
   const away = new Map((options.offlinePeriods ?? []).map((p) => [p.at, p.seconds]));
 
   let t = 0;
+  /** Sim seconds the catch-up replayed: the arc's clock is the ticks plus this. */
+  let awaySeconds = 0;
   let handBuys = 0;
-  while (t < seconds) {
-    const leave = away.get(t);
-    if (leave !== undefined) {
-      const now = Date.now();
-      const saved = { success: true, timestamp: now - leave * 1000 };
-      t += offline.catchUp(handle.engine, saved, now).caughtUpSeconds;
-    }
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // player's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: handle.engine,
+    tickDelta: DT,
+    // `until` ends the arc; the cap only backs it, a step past a horizon off the DT grid.
+    maxSimTime: seconds + DT,
+    until: ({ iteration, simTime }) => {
+      if (iteration > 0) {
+        t = awaySeconds + simTime;
+        const now = Math.round(t * 100) / 100;
+        for (const e of firm.subsidiaries.getAll()) {
+          if (Decimal.fromValue(e.producer.ownedCount.value).gte(1)) {
+            fire(
+              `open:${e.def.id}`,
+              e.def.tier === 0
+                ? `open t0 ${e.def.displayName} (first purchase)`
+                : `open t${e.def.tier} ${e.def.displayName}`,
+              now,
+            );
+          }
+        }
+        for (const e of firm.management.getAll()) {
+          if (e.purchasable.active.value) fire(`m:${e.def.id}`, `manage ${e.def.title}`, now);
+        }
+        for (const e of firm.milestones.getAll()) {
+          if (e.achievement.earned.value) fire(`ms:${e.def.id}`, `milestone ${e.def.title}`, now);
+        }
+        for (const e of firm.grades.getAll()) {
+          if (e.achievement.earned.value) fire(`g:${e.def.id}`, `grade ${e.def.grade}`, now);
+        }
+        for (const e of standing.upgrades.getAll()) {
+          if (e.purchasable.active.value) fire(`s:${e.def.id}`, `standing ${e.def.title}`, now);
+        }
+        for (const e of tips.upgrades.getAll()) {
+          if (e.purchasable.active.value) fire(`u:${e.def.id}`, `tip upgrade ${e.def.title}`, now);
+        }
+        for (const e of standing.feats.getAll()) {
+          if (e.achievement.earned.value) fire(`f:${e.def.id}`, `feat ${e.def.title}`, now);
+        }
+        if (tips.caught.value > 0) fire(`tip:${tips.caught.value}`, 'tip', now);
+        if (firm.ending.visible.value) fire('ending-offered', 'ending offered', now);
+        if (firm.ending.active.value) fire('ending', 'the Consolidated Building', now);
+        for (const tier of automation.dispatch.tiers) {
+          if (tier.order > 0 && automation.dispatch.isUnlocked(tier.id)) {
+            fire(`d:${tier.id}`, `dispatch → ${tier.displayName}`, now);
+          }
+        }
+        if (firm.incomeRate.value.gt(firm.dealValue.value.mul(ACTIVE_DEAL_RATE))) {
+          fire('crossover', 'subsidiaries out-earn the hand', now);
+        }
 
-    handBuys += player.step();
-
-    await handle.tick(1);
-    t += DT;
-    const now = Math.round(t * 100) / 100;
-
-    for (const e of firm.subsidiaries.getAll()) {
-      if (Decimal.fromValue(e.producer.ownedCount.value).gte(1)) {
-        fire(
-          `open:${e.def.id}`,
-          e.def.tier === 0
-            ? `open t0 ${e.def.displayName} (first purchase)`
-            : `open t${e.def.tier} ${e.def.displayName}`,
-          now,
-        );
+        const cash = Decimal.fromValue(firm.cash.value);
+        if (cash.isNan() || firm.incomeRate.value.isNan()) anomalies.push(`NaN at ${now}`);
+        if (cash.lt(0)) anomalies.push(`negative cash at ${now}`);
+        if (anomalies.length > 5) return true;
       }
-    }
-    for (const e of firm.management.getAll()) {
-      if (e.purchasable.active.value) fire(`m:${e.def.id}`, `manage ${e.def.title}`, now);
-    }
-    for (const e of firm.milestones.getAll()) {
-      if (e.achievement.earned.value) fire(`ms:${e.def.id}`, `milestone ${e.def.title}`, now);
-    }
-    for (const e of firm.grades.getAll()) {
-      if (e.achievement.earned.value) fire(`g:${e.def.id}`, `grade ${e.def.grade}`, now);
-    }
-    for (const e of standing.upgrades.getAll()) {
-      if (e.purchasable.active.value) fire(`s:${e.def.id}`, `standing ${e.def.title}`, now);
-    }
-    for (const e of tips.upgrades.getAll()) {
-      if (e.purchasable.active.value) fire(`u:${e.def.id}`, `tip upgrade ${e.def.title}`, now);
-    }
-    for (const e of standing.feats.getAll()) {
-      if (e.achievement.earned.value) fire(`f:${e.def.id}`, `feat ${e.def.title}`, now);
-    }
-    if (tips.caught.value > 0) fire(`tip:${tips.caught.value}`, 'tip', now);
-    if (firm.ending.visible.value) fire('ending-offered', 'ending offered', now);
-    if (firm.ending.active.value) fire('ending', 'the Consolidated Building', now);
-    for (const tier of automation.dispatch.tiers) {
-      if (tier.order > 0 && automation.dispatch.isUnlocked(tier.id)) {
-        fire(`d:${tier.id}`, `dispatch → ${tier.displayName}`, now);
+      if (t >= seconds) return true;
+      const leave = away.get(t);
+      if (leave !== undefined) {
+        const now = Date.now();
+        const saved = { success: true, timestamp: now - leave * 1000 };
+        const back = offline.catchUp(handle.engine, saved, now).caughtUpSeconds;
+        awaySeconds += back;
+        t += back;
       }
-    }
-    if (firm.incomeRate.value.gt(firm.dealValue.value.mul(ACTIVE_DEAL_RATE))) {
-      fire('crossover', 'subsidiaries out-earn the hand', now);
-    }
-
-    const cash = Decimal.fromValue(firm.cash.value);
-    if (cash.isNan() || firm.incomeRate.value.isNan()) anomalies.push(`NaN at ${now}`);
-    if (cash.lt(0)) anomalies.push(`negative cash at ${now}`);
-    if (anomalies.length > 5) break;
-  }
+      handBuys += player.step();
+      return false;
+    },
+  });
 
   return {
     beats,
@@ -180,9 +192,3 @@ export async function runArc(options: ArcOptions): Promise<ArcResult> {
     dispose: () => handle.dispose(),
   };
 }
-
-/** Sim seconds as `NmSSs`; an em dash for never. */
-export const fmt = (s: number): string =>
-  Number.isFinite(s)
-    ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, '0')}s`
-    : '—';

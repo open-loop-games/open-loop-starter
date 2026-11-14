@@ -95,14 +95,16 @@ Every key is read at its reader site through `tunable()`; the registry is in
 
 Run each from the repo root with `pnpm exec vite-node src/showcase/archetypes/producer/balance/<probe>.ts`.
 Each probe's header says how to read it. A full arc probe plays four hours in quarter
-seconds and takes several minutes; run seeds in parallel.
+seconds and takes under half a minute; run seeds in parallel.
 
 ## Known thin
 
-- **The engine runs ahead of the projection when tips are caught.** Over seeds 1–3 the
-  building is bought at 3h49m–3h59m, against a drawn median near 4h04m. An idle engine
-  lands within a few percent of the idle projection, so the engine values the spree,
-  the windfall or the tip achievements more than the projection books them.
+- **The engine runs ahead of the projection when tips are caught.** Over the recorded
+  three-seed batch the building is bought at 3h49m–3h54m, against a drawn median near
+  4h04m: all three runs come before the earliest of `tip-probe.ts`'s 24 drawn arcs, at
+  3h55m. An idle engine lands within a few percent of the idle projection, so the engine
+  values the spree, the windfall or the tip achievements more than the projection books
+  them.
 - **The expected ending is jagged in the cost step.** A 0.1% change in the step moves it
   by up to ±3%, because the greedy buy order flips; the solve lands within that of
   `ENDING_TARGET`, and any change to the projection re-rolls where.
