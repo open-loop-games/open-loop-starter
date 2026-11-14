@@ -20,6 +20,8 @@
  *   charter's own row is what `CHARTER_SHARE` solves Crédit Mobilier and the École against.
  */
 
+import { spreadOf } from '@/balance';
+import { formatClock } from '@/composables/useFormatting';
 import { CHARTER_IDS, gainRate, planFor, predictRun, type CharterId } from '../data';
 import { runArc } from './_foreman';
 
@@ -36,7 +38,6 @@ const SETS: CharterId[][] = [
   [...CHARTER_IDS],
 ];
 const NAMES = ['none', 'patronage', 'pool', 'credit', 'ecole', 'pat+pool', 'all four'];
-const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 interface Cell {
   renown: number;
@@ -58,24 +59,36 @@ for (const r of RENOWN) {
     });
     // Each sampled run against the spine's prediction for the empire it opened with.
     let held = r + arc.expositions[0]!.renown;
-    const sum = { seconds: [0, 0], medal: [0, 0], rate: [0, 0] };
-    for (const run of arc.expositions.slice(1)) {
+    const runs = arc.expositions.slice(1).map((run) => {
       const empire = { renown: held, charters };
       const predicted = predictRun(empire, planFor(empire));
-      sum.seconds[0]! += run.runSeconds;
-      sum.seconds[1]! += predicted.seconds;
-      sum.medal[0]! += run.renown;
-      sum.medal[1]! += predicted.renown;
-      sum.rate[0]! += gainRate(empire, run.renown, run.runSeconds);
-      sum.rate[1]! += gainRate(empire, predicted.renown, predicted.seconds);
       held += run.renown;
-    }
-    const mean = (p: number[]) => [p[0]! / SAMPLES, p[1]! / SAMPLES] as [number, number];
+      return {
+        seconds: [run.runSeconds, predicted.seconds],
+        medal: [run.renown, predicted.renown],
+        rate: [
+          gainRate(empire, run.renown, run.runSeconds),
+          gainRate(empire, predicted.renown, predicted.seconds),
+        ],
+      };
+    });
+    const pick = (k: keyof (typeof runs)[number], i: number) => (x: (typeof runs)[number]) =>
+      x[k][i]!;
+    const mean = spreadOf(runs, {
+      seconds: pick('seconds', 0),
+      plannedSeconds: pick('seconds', 1),
+      medal: pick('medal', 0),
+      plannedMedal: pick('medal', 1),
+      rate: pick('rate', 0),
+      plannedRate: pick('rate', 1),
+    });
+    const pair = (k: string, planned: string) =>
+      [mean[k]?.avg ?? NaN, mean[planned]?.avg ?? NaN] as [number, number];
     const cell: Cell = {
       renown: r + arc.expositions[0]!.renown,
-      seconds: mean(sum.seconds),
-      medal: mean(sum.medal),
-      rate: mean(sum.rate),
+      seconds: pair('seconds', 'plannedSeconds'),
+      medal: pair('medal', 'plannedMedal'),
+      rate: pair('rate', 'plannedRate'),
     };
     se += (cell.rate[1] / cell.rate[0] - 1) ** 2;
     sm += (cell.medal[1] / cell.medal[0] - 1) ** 2;
@@ -91,7 +104,7 @@ for (const row of cells)
     String(row[0]!.renown).padEnd(7) +
       row
         .map((c) =>
-          `${fmt(c.seconds[0])}+${c.medal[0].toFixed(0)}/${fmt(c.seconds[1])}+${c.medal[1].toFixed(0)}`.padStart(
+          `${formatClock(c.seconds[0])}+${c.medal[0].toFixed(0)}/${formatClock(c.seconds[1])}+${c.medal[1].toFixed(0)}`.padStart(
             19,
           ),
         )

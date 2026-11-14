@@ -18,6 +18,7 @@
  *   `locked` not yet patented.
  */
 
+import { formatClock } from '@/composables/useFormatting';
 import { RESOURCES, ROLES, predictArc } from '../data';
 import { DT, runArc } from './_foreman';
 
@@ -25,7 +26,6 @@ declare const process: { argv: string[]; env: Record<string, string | undefined>
 
 const expositions = Number(process.argv[2] ?? 5);
 const dt = Number(process.argv[3] ?? DT);
-const fmt = (t: number) => `${Math.floor(t / 60)}m${String(Math.round(t % 60)).padStart(2, '0')}s`;
 
 const arc = runArc({
   expositions,
@@ -35,13 +35,13 @@ const arc = runArc({
 });
 
 console.log(`== beats (dt ${dt}) ==`);
-for (const [t, label] of arc.beats) console.log(`  ${fmt(t).padStart(7)}  ${label}`);
+for (const [t, label] of arc.beats) console.log(`  ${formatClock(t).padStart(7)}  ${label}`);
 
 console.log('== runs, measured · spine ==');
 const spine = predictArc(arc.expositions.length);
 for (const [i, r] of arc.expositions.entries())
   console.log(
-    `  ${String(i + 1).padStart(2)}: ${fmt(r.runSeconds).padStart(6)} · ${fmt(spine[i]!.seconds).padStart(6)} · +${r.renown} · +${spine[i]!.renown} · score ${Math.round(r.score)} (dossier ${Math.round(r.dossier)}) · crew ${r.crew} · ${Object.entries(
+    `  ${String(i + 1).padStart(2)}: ${formatClock(r.runSeconds).padStart(6)} · ${formatClock(spine[i]!.seconds).padStart(6)} · +${r.renown} · +${spine[i]!.renown} · score ${Math.round(r.score)} (dossier ${Math.round(r.dossier)}) · crew ${r.crew} · ${Object.entries(
       r.built,
     )
       .map(([k, v]) => `${k} ${v}`)

@@ -18,7 +18,8 @@
  * tick-by-tick behavioral specs; this plays an arc and records magnitudes.
  */
 
-import { addResource, toNumber } from '@open-loop/engine';
+import { addResource, runUntil, toNumber } from '@open-loop/engine';
+import { formatClock } from '@/composables/useFormatting';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import {
@@ -198,6 +199,8 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
     modules: [...sharedBase, ...createInterlockerModules()],
     persistenceNamespacePrefix: 'interlocker-probe',
     intervalRate: 1 / dt,
+    // One tick of `dt` per step, as `tickOnce` took it, at the coarse dts the charter probe uses.
+    maxDeltaTime: dt,
   });
   const works = getWorks();
   const empire = getEmpire();
@@ -230,8 +233,6 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
   const traceLines: string[] = [];
   const built = () =>
     Object.fromEntries(BUILDINGS.map((b) => [b.id, owned(b.id)])) as Record<BuildingId, number>;
-  const fmt = (t: number) =>
-    `${Math.floor(t / 60)}m${String(Math.round(t % 60)).padStart(2, '0')}s`;
 
   const records: ExpositionRecord[] = [];
   let runStart = 0;
@@ -239,111 +240,120 @@ export function runArc(options: ArcOptions = {}): ArcRecord {
   let lastSig = '';
   let softlock = false;
 
-  for (let t = 0; t < maxSimSeconds; t += dt) {
-    handle.engine.tickDriver.tickOnce();
-    sim += dt;
-    if (Math.round(sim * 2) % 2 === 0) foreman.tend();
-    for (const w of telegraph.log.since(lastWire)) {
-      if (w.kind === 'order') beats.push([sim, `run ${records.length + 1}: ${w.text}`]);
-      lastWire = w.seq;
-    }
-    const run = records.length + 1;
-    for (const b of BUILDINGS)
-      once(`b-${b.id}-${run}`, owned(b.id) > b.start, `run ${run}: first ${b.name}`);
-    for (const r of RESEARCH)
-      once(
-        `r-${r.id}-${run}`,
-        works.research.getPurchasable(r.id)!.active.value,
-        `run ${run}: patent ${r.name}`,
-      );
-    once(`plane-${run}`, n(works.res.aeroplanes.value) >= 1, `run ${run}: first aeroplane`);
-    once(`dossier-${run}`, ministry.dossier.value > 0, `run ${run}: first order delivered`);
-    for (const c of CHARTERS)
-      once(`charter-${c.id}`, empire.holds(c.id).value, `charter ${c.name} held`);
-    for (const b of BUREAUX)
-      once(`bureau-${b.id}`, empire.employs(b.id).value, `bureau ${b.name} employed`);
-    once('grand-prix', empire.grandPrix.value, 'THE GRAND PRIX, Paris 1867');
-    once(
-      `hunger-${run}`,
-      works.fed.value < 1,
-      `run ${run}: the compagnons go hungry (fed ${works.fed.value.toFixed(2)})`,
-    );
-
-    if (foreman.ready()) {
-      const planes = n(works.res.aeroplanes.value);
-      const atBuilt = built();
-      const crew = works.workersTotal.value;
-      const score = expo.score.value;
-      const dossier = ministry.dossier.value;
-      const gain = foreman.stage();
-      const runSeconds = sim - runStart;
-      records.push({
-        at: sim,
-        runSeconds,
-        planes,
-        score,
-        dossier,
-        renown: gain,
-        built: atBuilt,
-        crew,
-        charters: CHARTERS.filter((c) => empire.holds(c.id).value).map((c) => c.id),
-        kept: RESEARCH.filter((r) => works.research.getPurchasable(r.id)!.active.value).map(
-          (r) => r.id,
-        ),
-      });
-      runStart = sim;
-      const r = records[records.length - 1]!;
-      beats.push([
-        sim,
-        `EXPOSITION ${records.length} (${calendar.season.value} ${calendar.year.value}): score ${score.toFixed(0)} (dossier ${dossier.toFixed(0)}) -> +${gain} renown (run ${fmt(r.runSeconds)}; built ${Object.entries(
-          atBuilt,
-        )
-          .map(([k, v]) => `${k} ${v}`)
-          .join(' ')}; crew ${crew})`,
-      ]);
-      beats.push([
-        sim,
-        `run ${records.length + 1} opens with charters [${r.charters.join(', ')}], patents kept [${r.kept.join(', ')}], crew ${works.workersTotal.value}`,
-      ]);
-      if (records.length >= stopAfter) break;
-    }
-
-    // One sample a minute: what binds each trade, which bins sit full.
-    if (Math.abs(sim % 60) < dt / 2) {
-      tally.minutes++;
-      for (const r of ROLES) {
-        const k: Limit = works.roleStatus[r.id].limit;
-        tally.limits[r.id][k] = (tally.limits[r.id][k] ?? 0) + 1;
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // foreman's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: handle.engine,
+    tickDelta: dt,
+    maxSimTime: maxSimSeconds,
+    until: ({ iteration, simTime }) => {
+      // Iteration 0 is the state before the first advance; the foreman first tends after it.
+      if (iteration === 0) return false;
+      sim = simTime;
+      if (Math.round(sim * 2) % 2 === 0) foreman.tend();
+      for (const w of telegraph.log.since(lastWire)) {
+        if (w.kind === 'order') beats.push([sim, `run ${records.length + 1}: ${w.text}`]);
+        lastWire = w.seq;
       }
-      for (const def of RESOURCES)
-        if (n(works.res[def.id].value) >= 0.95 * works.cap[def.id].value)
-          tally.fullBins[def.id] = (tally.fullBins[def.id] ?? 0) + 1;
-      if (works.fed.value < 1) tally.hungry++;
-      if (trace)
-        traceLines.push(
-          `${fmt(sim)} | ${ROLES.map((r) => `${r.id[0]}${n(works.crew[r.id].value)}:${works.roleStatus[r.id].limit}`).join(' ')} | ` +
-            `${RESOURCES.map((d) => `${d.id.slice(0, 3)} ${n(works.res[d.id].value).toFixed(0)}/${works.cap[d.id].value.toFixed(0)}`).join(' ')} | ` +
-            BUILDINGS.map((b) => `${b.id}${owned(b.id)}`).join(' '),
+      const run = records.length + 1;
+      for (const b of BUILDINGS)
+        once(`b-${b.id}-${run}`, owned(b.id) > b.start, `run ${run}: first ${b.name}`);
+      for (const r of RESEARCH)
+        once(
+          `r-${r.id}-${run}`,
+          works.research.getPurchasable(r.id)!.active.value,
+          `run ${run}: patent ${r.name}`,
         );
-    }
+      once(`plane-${run}`, n(works.res.aeroplanes.value) >= 1, `run ${run}: first aeroplane`);
+      once(`dossier-${run}`, ministry.dossier.value > 0, `run ${run}: first order delivered`);
+      for (const c of CHARTERS)
+        once(`charter-${c.id}`, empire.holds(c.id).value, `charter ${c.name} held`);
+      for (const b of BUREAUX)
+        once(`bureau-${b.id}`, empire.employs(b.id).value, `bureau ${b.name} employed`);
+      once('grand-prix', empire.grandPrix.value, 'THE GRAND PRIX, Paris 1867');
+      once(
+        `hunger-${run}`,
+        works.fed.value < 1,
+        `run ${run}: the compagnons go hungry (fed ${works.fed.value.toFixed(2)})`,
+      );
 
-    for (const def of RESOURCES)
-      if (!Number.isFinite(n(works.res[def.id].value))) throw new Error(`non-finite ${def.name}`);
-    const sig =
-      RESOURCES.map((d) => n(works.res[d.id].value).toFixed(0)).join(',') +
-      BUILDINGS.map((b) => owned(b.id)).join(',');
-    if (sig !== lastSig) {
-      lastSig = sig;
-      lastProgress = sim;
-    } else if (sim - lastProgress > 600) {
-      beats.push([sim, 'SOFTLOCK: nothing moved for 10 minutes']);
-      softlock = true;
-      break;
-    }
-  }
+      if (foreman.ready()) {
+        const planes = n(works.res.aeroplanes.value);
+        const atBuilt = built();
+        const crew = works.workersTotal.value;
+        const score = expo.score.value;
+        const dossier = ministry.dossier.value;
+        const gain = foreman.stage();
+        const runSeconds = sim - runStart;
+        records.push({
+          at: sim,
+          runSeconds,
+          planes,
+          score,
+          dossier,
+          renown: gain,
+          built: atBuilt,
+          crew,
+          charters: CHARTERS.filter((c) => empire.holds(c.id).value).map((c) => c.id),
+          kept: RESEARCH.filter((r) => works.research.getPurchasable(r.id)!.active.value).map(
+            (r) => r.id,
+          ),
+        });
+        runStart = sim;
+        const r = records[records.length - 1]!;
+        beats.push([
+          sim,
+          `EXPOSITION ${records.length} (${calendar.season.value} ${calendar.year.value}): score ${score.toFixed(0)} (dossier ${dossier.toFixed(0)}) -> +${gain} renown (run ${formatClock(r.runSeconds)}; built ${Object.entries(
+            atBuilt,
+          )
+            .map(([k, v]) => `${k} ${v}`)
+            .join(' ')}; crew ${crew})`,
+        ]);
+        beats.push([
+          sim,
+          `run ${records.length + 1} opens with charters [${r.charters.join(', ')}], patents kept [${r.kept.join(', ')}], crew ${works.workersTotal.value}`,
+        ]);
+        if (records.length >= stopAfter) return true;
+      }
+
+      // One sample a minute: what binds each trade, which bins sit full.
+      if (Math.abs(sim % 60) < dt / 2) {
+        tally.minutes++;
+        for (const r of ROLES) {
+          const k: Limit = works.roleStatus[r.id].limit;
+          tally.limits[r.id][k] = (tally.limits[r.id][k] ?? 0) + 1;
+        }
+        for (const def of RESOURCES)
+          if (n(works.res[def.id].value) >= 0.95 * works.cap[def.id].value)
+            tally.fullBins[def.id] = (tally.fullBins[def.id] ?? 0) + 1;
+        if (works.fed.value < 1) tally.hungry++;
+        if (trace)
+          traceLines.push(
+            `${formatClock(sim)} | ${ROLES.map((r) => `${r.id[0]}${n(works.crew[r.id].value)}:${works.roleStatus[r.id].limit}`).join(' ')} | ` +
+              `${RESOURCES.map((d) => `${d.id.slice(0, 3)} ${n(works.res[d.id].value).toFixed(0)}/${works.cap[d.id].value.toFixed(0)}`).join(' ')} | ` +
+              BUILDINGS.map((b) => `${b.id}${owned(b.id)}`).join(' '),
+          );
+      }
+
+      for (const def of RESOURCES)
+        if (!Number.isFinite(n(works.res[def.id].value))) throw new Error(`non-finite ${def.name}`);
+      const sig =
+        RESOURCES.map((d) => n(works.res[d.id].value).toFixed(0)).join(',') +
+        BUILDINGS.map((b) => owned(b.id)).join(',');
+      if (sig !== lastSig) {
+        lastSig = sig;
+        lastProgress = sim;
+      } else if (sim - lastProgress > 600) {
+        beats.push([sim, 'SOFTLOCK: nothing moved for 10 minutes']);
+        softlock = true;
+        return true;
+      }
+      return false;
+    },
+  });
 
   const endState = [
-    `sim ${fmt(sim)}, expositions ${expo.cycle.count.value}, renown ${n(empire.renown.value)} (lifetime ${empire.lifetimeRenown.value})`,
+    `sim ${formatClock(sim)}, expositions ${expo.cycle.count.value}, renown ${n(empire.renown.value)} (lifetime ${empire.lifetimeRenown.value})`,
     `buildings: ${BUILDINGS.map((b) => `${b.id} ${owned(b.id)}`).join(', ')}`,
     `crew ${works.workersTotal.value} (idle ${works.workersIdle.value}): ${ROLES.map((r) => `${r.id} ${n(works.crew[r.id].value)} [${works.roleStatus[r.id].limit} ${works.roleStatus[r.id].cyclesPerSec.toFixed(2)}/s]`).join(', ')}`,
     `stock: ${RESOURCES.map((d) => `${d.id} ${n(works.res[d.id].value).toFixed(1)}/${works.cap[d.id].value.toFixed(0)} (${works.net[d.id] >= 0 ? '+' : ''}${works.net[d.id].toFixed(2)})`).join(', ')}`,

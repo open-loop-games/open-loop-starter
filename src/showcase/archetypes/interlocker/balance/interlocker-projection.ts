@@ -11,6 +11,7 @@
  * dossier) and the medal it shows. Instant.
  */
 
+import { formatClock } from '@/composables/useFormatting';
 import {
   COST_GROWTH,
   DEFAULT_PLAN,
@@ -40,7 +41,6 @@ import {
 declare const process: { argv: string[] };
 
 const t0 = performance.now();
-const fmt = (t: number) => `${Math.floor(t / 60)}m${String(Math.round(t % 60)).padStart(2, '0')}s`;
 const bound = (p: {
   seconds: number;
   rawSeconds: number;
@@ -84,7 +84,7 @@ console.log(
 function show(label: string, plan: BuildPlan): void {
   const p = predictRun(FRESH, plan);
   console.log(
-    `  ${label}: ${fmt(p.seconds)}, raw ${fmt(p.rawSeconds)} · crew ${fmt(p.crewSeconds)} (${Object.entries(
+    `  ${label}: ${formatClock(p.seconds)}, raw ${formatClock(p.rawSeconds)} · crew ${formatClock(p.crewSeconds)} (${Object.entries(
       plan,
     )
       .map(([k, v]) => `${k} ${v}`)
@@ -115,7 +115,7 @@ console.log('== the arc ==');
 for (const [i, r] of predictArc(Number(process.argv[2] || 12)).entries()) {
   const p = predictRun(r.empire, r.plan);
   console.log(
-    `  ${String(i + 1).padStart(2)}: ${fmt(r.seconds).padStart(6)} at ${fmt(r.at).padStart(7)} · ${bound(p)}-bound · score ${Math.round(p.exhibit)}+${Math.round(p.dossier)} (${p.orders} orders) → +${r.renown} · renown ${String(r.empire.renown).padStart(2)} [${[...r.empire.charters, ...r.bureaux].join(' ')}] · ${Object.entries(
+    `  ${String(i + 1).padStart(2)}: ${formatClock(r.seconds).padStart(6)} at ${formatClock(r.at).padStart(7)} · ${bound(p)}-bound · score ${Math.round(p.exhibit)}+${Math.round(p.dossier)} (${p.orders} orders) → +${r.renown} · renown ${String(r.empire.renown).padStart(2)} [${[...r.empire.charters, ...r.bureaux].join(' ')}] · ${Object.entries(
       r.plan,
     )
       .map(([k, v]) => `${k} ${v}`)
