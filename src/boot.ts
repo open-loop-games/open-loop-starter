@@ -36,8 +36,8 @@
  * `start()`, with flags from `createFlag` and rates from rate sources. Pass
  * `accessor` through, as for `createEngine`, only for state paths
  * (`{ getStateAt, setStateAt }`) or a `wrap`. A state Gate or effect without
- * them fails where it is built, naming the method. `_blank`'s flags module is
- * the worked example.
+ * them fails where it is built, naming the method. In a starter checkout,
+ * `_blank`'s flags module is the worked example.
  *
  * Error reporting: `bootApp` installs an `app.config.errorHandler`. Without
  * one, Vue degrades a throw inside a lifecycle hook or event handler to a

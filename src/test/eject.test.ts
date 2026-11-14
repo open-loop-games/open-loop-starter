@@ -178,6 +178,13 @@ describe('eject --clean residue', () => {
       const forkDeps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
       expect(forkDeps.filter((d) => d in SHOWCASE_ONLY_DEPS)).toEqual([]);
 
+      // A story-relative path (`_blank/modules/core.ts`) points into the deleted tree
+      // as surely as a full one, and eject's repoint rewrites only the full prefix.
+      const stories = readdirSync(join(ROOT, 'src/showcase/archetypes')).filter((n) =>
+        statSync(join(ROOT, 'src/showcase/archetypes', n)).isDirectory(),
+      );
+      const storyPath = new RegExp('`(' + stories.join('|') + ')/');
+
       const residue: string[] = [];
       for (const rel of filesUnder(fork)) {
         if (rel === 'pnpm-lock.yaml' || !/\.(ts|vue|mjs|md|json|css|html)$|^\.husky\//.test(rel)) {
@@ -188,7 +195,11 @@ describe('eject --clean residue', () => {
           .forEach((line, i) => {
             // The read-in-place pointer names starter's tree on purpose.
             const showcasePath = /src\/showcase/.test(line) && !line.includes('open-loop-starter');
-            if (showcasePath || /\b(gallery|sandbox)\b|eject:strip/i.test(line)) {
+            if (
+              showcasePath ||
+              storyPath.test(line) ||
+              /\b(gallery|sandbox)\b|eject:strip/i.test(line)
+            ) {
               residue.push(`${rel}:${i + 1}: ${line.trim()}`);
             }
           });
