@@ -4,9 +4,10 @@
  * plays it beside the recorded windows.
  *
  * Fire times are session time, the sum of battle lengths (camp takes no time). The probe's
- * once-a-second samples are too coarse for the opening beats, so this drives the loop itself.
+ * once-a-second samples are too coarse for the opening beats, so this reads every step itself.
  * One seeded run is the measurement.
  */
+import { runUntil } from '@open-loop/engine';
 import { buildGame, DT, marshalBetweenBattles, seatMarshal } from './_marshal';
 
 /** The runs one recording spans: the career probe's seed. */
@@ -36,16 +37,23 @@ export function record(run: (typeof runs)[number]): Record<number, number | null
     const mudhole = g.chronicle.field.value.name === 'the Mudhole';
     g.battle.start();
     if (vesk) mark(6, session);
-    let t = 0;
-    while (t < MAX_SECONDS && g.chronicle.battles.value === before) {
-      g.engine.tickDriver.advanceTime(DT);
-      t += DT;
-      if (b === 0 && g.causeway.line() !== null) mark(1, session + t);
-      const mine = g.causeway.members.value.filter((m) => m.side === 'player');
-      if (mine.some((m) => m.troop === 'siege')) mark(2, session + t);
-      if (mudhole && mine.some((m) => m.troop === 'bow')) mark(4, session + t);
-    }
-    session += t;
+    const over = () => g.chronicle.battles.value !== before;
+    // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+    // recorder's step, which `'uniform'` mode runs before every advance.
+    const battle = runUntil({
+      engine: g.engine,
+      tickDelta: DT,
+      maxSimTime: MAX_SECONDS,
+      until: ({ iteration, simTime: t }) => {
+        if (iteration === 0) return over();
+        if (b === 0 && g.causeway.line() !== null) mark(1, session + t);
+        const mine = g.causeway.members.value.filter((m) => m.side === 'player');
+        if (mine.some((m) => m.troop === 'siege')) mark(2, session + t);
+        if (mudhole && mine.some((m) => m.troop === 'bow')) mark(4, session + t);
+        return over();
+      },
+    });
+    session += battle.elapsedSimulated;
     if (g.chronicle.battles.value === before) break;
     if (g.chronicle.victories.value > 0) mark(3, session);
     if (g.chronicle.endingReached.value) mark(7, session);

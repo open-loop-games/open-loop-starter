@@ -10,7 +10,7 @@
  * specs; this plays whole battles and reads magnitudes.
  */
 
-import { seedRNG, toNumber, type Engine, type TuningRegistry } from '@open-loop/engine';
+import { runUntil, seedRNG, toNumber, type Engine, type TuningRegistry } from '@open-loop/engine';
 import { bootTestEngine } from '@/test/bootTestEngine';
 import { sharedBase } from '@/modules';
 import { ANCHORS, BOONS, FIELDS, LORDS, NO_TWIST, TROOP_IDS, type Temperament } from '../data';
@@ -142,18 +142,25 @@ export function playBattle(g: Game, maxSeconds = 900, first?: Side): BattleOutco
   const before = g.chronicle.battles.value;
   g.battle.start(first);
   const samples: Second[] = [];
-  let t = 0;
   let next = 1;
-  while (t < maxSeconds && g.chronicle.battles.value === before) {
-    g.engine.tickDriver.advanceTime(DT);
-    t += DT;
-    if (t >= next) {
-      next += 1;
-      samples.push({ t, line: g.causeway.line(), members: g.causeway.members.value.length });
-    }
-  }
+  const over = () => g.chronicle.battles.value !== before;
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // sampler's step, which `'uniform'` mode runs before every advance.
+  const run = runUntil({
+    engine: g.engine,
+    tickDelta: DT,
+    maxSimTime: maxSeconds,
+    until: ({ iteration, simTime: t }) => {
+      if (iteration === 0) return over();
+      if (t >= next) {
+        next += 1;
+        samples.push({ t, line: g.causeway.line(), members: g.causeway.members.value.length });
+      }
+      return over();
+    },
+  });
   const done = g.chronicle.battles.value > before;
-  return { record: done ? g.chronicle.last.value : null, seconds: t, samples };
+  return { record: done ? g.chronicle.last.value : null, seconds: run.elapsedSimulated, samples };
 }
 
 /** Between battles: a weapon as soon as one opens, then the strength boons in turn, then the curtain. */
@@ -169,12 +176,4 @@ export function marshalBetweenBattles(c: ChronicleApi): string[] {
     bought.push(pick);
   }
   return bought;
-}
-
-export function clock(t: number): string {
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const s = Math.floor(t % 60);
-  const mm = String(m).padStart(h ? 2 : 1, '0');
-  return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
 }

@@ -18,14 +18,8 @@
  * - the last line: battles and session time to the ending.
  */
 
-import {
-  buildGame,
-  clock,
-  marshalBetweenBattles,
-  perturb,
-  playBattle,
-  seatMarshal,
-} from './_marshal';
+import { formatClock } from '@/composables/useFormatting';
+import { buildGame, marshalBetweenBattles, perturb, playBattle, seatMarshal } from './_marshal';
 
 const seed = Number(process.argv[2] ?? 1);
 const limit = Number(process.argv[3] ?? 60);
@@ -41,13 +35,13 @@ for (let i = 0; i < limit && !g.chronicle.endingReached.value; i++) {
   const r = out.record;
   if (!r) {
     console.log(
-      `  ${clock(session).padStart(7)}  battle ${i + 1} vs ${lord}: no gate fell in ${clock(out.seconds)}`,
+      `  ${formatClock(session).padStart(7)}  battle ${i + 1} vs ${lord}: no gate fell in ${formatClock(out.seconds)}`,
     );
     break;
   }
   const bought = marshalBetweenBattles(g.chronicle);
   console.log(
-    `  ${clock(session).padStart(7)}  battle ${i + 1} vs ${lord}: ${r.won ? 'VICTORY' : 'defeat '} in ${clock(r.seconds)}${r.byBreach ? '' : ' (season)'}` +
+    `  ${formatClock(session).padStart(7)}  battle ${i + 1} vs ${lord}: ${r.won ? 'VICTORY' : 'defeat '} in ${formatClock(r.seconds)}${r.byBreach ? '' : ' (season)'}` +
       ` · +${r.renown} renown, volume ${r.volumeAfter}` +
       (bought.length ? ` · boons ${bought.join(', ')}` : '') +
       (r.ending ? '  *** the Stolen Throne falls ***' : ''),
@@ -55,6 +49,6 @@ for (let i = 0; i < limit && !g.chronicle.endingReached.value; i++) {
 }
 console.log(
   `\n  ${g.chronicle.battles.value} battles, ${g.chronicle.victories.value} victories, rung ${g.chronicle.rung.value}` +
-    `, session ${clock(session)}${g.chronicle.endingReached.value ? ', ending reached' : ''}`,
+    `, session ${formatClock(session)}${g.chronicle.endingReached.value ? ', ending reached' : ''}`,
 );
 g.dispose();

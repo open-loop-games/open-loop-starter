@@ -12,7 +12,8 @@ import { join } from 'node:path';
 import { seedRNG } from '@open-loop/engine';
 import { FIELDS } from '../data';
 import { createTugEngine } from '../engine';
-import { DT, clock, marshalBetweenBattles, seatMarshal, wrapGame } from '../balance/_marshal';
+import { formatClock } from '@/composables/useFormatting';
+import { DT, marshalBetweenBattles, seatMarshal, wrapGame } from '../balance/_marshal';
 
 const SEED = 1;
 const MAX_BATTLES = 20;
@@ -54,7 +55,9 @@ const check = () => {
   if (next < BEATS.length && BEATS[next]!.at()) {
     const { file } = BEATS[next]!;
     writeFileSync(join(dir, `${file}.save`), engine.saveManager!.exportSave() + '\n');
-    console.log(`${file} at ${clock(session)} (battle clock ${clock(g.causeway.clock.value)})`);
+    console.log(
+      `${file} at ${formatClock(session)} (battle clock ${formatClock(g.causeway.clock.value)})`,
+    );
     next++;
   }
 };

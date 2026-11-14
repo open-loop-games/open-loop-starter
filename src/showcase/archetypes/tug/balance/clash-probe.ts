@@ -12,6 +12,7 @@
  * ten points of the prediction and the winner always the same.
  */
 
+import { runUntil } from '@open-loop/engine';
 import { ANCHORS, TROOPS, predictClash, releaseBudget, troop, type TroopId } from '../data';
 import { idleCommander } from '../modules';
 import { buildGame, openAll, perturb, DT } from './_marshal';
@@ -30,19 +31,24 @@ function clash(a: TroopId, sa: number, b: TroopId, sb: number) {
     g.causeway.members.value
       .filter((m) => m.side === side)
       .reduce((s, m) => s + m.cost * (m.hp / m.maxHp), 0);
-  let t = 0;
+  const any = (side: 'player' | 'rival') => g.causeway.members.value.some((m) => m.side === side);
   let spentA = 0;
   let spentB = 0;
-  while (t < 300) {
-    g.engine.tickDriver.advanceTime(DT);
-    t += DT;
-    const any = (side: 'player' | 'rival') => g.causeway.members.value.some((m) => m.side === side);
-    if (!spentA && any('player')) {
-      spentA = worth('player');
-      spentB = worth('rival');
-    }
-    if (spentA && (!any('player') || !any('rival'))) break;
-  }
+  // TODO(expansion): a per-iteration act hook on runUntil. Until then `until` carries the
+  // tally's step, which `'uniform'` mode runs before every advance.
+  runUntil({
+    engine: g.engine,
+    tickDelta: DT,
+    maxSimTime: 300,
+    until: ({ iteration }) => {
+      if (iteration === 0) return false;
+      if (!spentA && any('player')) {
+        spentA = worth('player');
+        spentB = worth('rival');
+      }
+      return spentA > 0 && (!any('player') || !any('rival'));
+    },
+  });
   const keptA = worth('player') / spentA;
   const keptB = worth('rival') / spentB;
   g.dispose();

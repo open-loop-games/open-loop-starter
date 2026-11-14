@@ -107,7 +107,10 @@ Each runs in seconds; the header of each says how to read it.
   and a keep one to eight: the Spyglass, the Twin Sties and the Stolen Throne the most. The
   career probe reads one or two, and three or four, as healthy.
 - **Fire-pot mirrors close on the season.** On the open field both seats mount fire-pots,
-  and only 5 of 72 battles breach; a feast day lifts that to 46. In the career, where the
+  and only 8 of 72 battles breach; a feast day lifts that to 51. In the career, where the
   weapons differ, almost every battle breaches.
+- **Twelve seeds a pairing cannot see a small side lean.** Over the front probe's default
+  batch, Fairhold's seat wins 22 of the 36 mirror battles; over seeds 1–12 the rival's seat
+  wins 23. A frame error shows in `front-probe.ts` only when it is larger than that swing.
 - **Past the ending nothing is targeted.** The heirs stand at the last lord's strength while
   the boons keep growing.
